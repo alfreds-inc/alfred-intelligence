@@ -1,2 +1,1 @@
-export const PAIRING_APPROVED_MESSAGE =
-  "✅ OpenClaw access approved. Send a message to start chatting.";
+export const PAIRING_APPROVED_MESSAGE = "✅ All set! Whenever you're ready, let's get to work.";
