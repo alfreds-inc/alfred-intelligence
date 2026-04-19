@@ -110,6 +110,7 @@ function isLikelyOpenClawCliProcess(argv: string[] = process.argv): boolean {
   return (
     entryBasename === "openclaw" ||
     entryBasename === "openclaw.mjs" ||
+    entryBasename === "alfred-intelligence" ||
     entryBasename === "entry.js" ||
     entryBasename === "entry.mjs"
   );
