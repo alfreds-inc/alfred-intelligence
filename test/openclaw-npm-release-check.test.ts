@@ -578,7 +578,19 @@ describe("collectReleasePackageMetadataErrors", () => {
     ).toEqual([]);
   });
 
-  it("rejects node-llama-cpp as a peer dependency", () => {
+  it("accepts the alfred-intelligence fork identity as valid", () => {
+    expect(
+      collectReleasePackageMetadataErrors({
+        name: "@alfreds-inc/alfred-intelligence",
+        description: "Multi-channel AI gateway with extensible messaging integrations",
+        license: "MIT",
+        repository: { url: "git+https://github.com/alfreds-inc/alfred-intelligence.git" },
+        bin: { "alfred-intelligence": "openclaw.mjs", openclaw: "openclaw.mjs" },
+      }),
+    ).toEqual([]);
+  });
+
+  it("requires node-llama-cpp to stay an optional peer", () => {
     expect(
       collectReleasePackageMetadataErrors({
         name: "openclaw",
