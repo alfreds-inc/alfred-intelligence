@@ -69,7 +69,6 @@ const ALLOWED_REPOSITORY_URLS = new Set([
 ]);
 const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@alfreds-inc/alfred-intelligence"]);
 const ALLOWED_BIN_ENTRIES = new Set(["openclaw", "alfred-intelligence"]);
-const EXPECTED_REPOSITORY_URL = "https://github.com/openclaw/openclaw";
 const OPTIONAL_LOCAL_EMBEDDING_RUNTIME_PACKAGE = "node-llama-cpp";
 const MAX_CALVER_DISTANCE_DAYS = 2;
 const REQUIRED_PACKED_PATHS = [

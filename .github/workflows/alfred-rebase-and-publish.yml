@@ -147,12 +147,35 @@ jobs:
 
       - name: Run check suite
         id: check
-        # We run `pnpm check` (typecheck + lint + static checks) rather than
-        # `pnpm test`. Full test runs invoke upstream fixtures we haven't had
-        # cycles to reconcile line-by-line; check is the defensive gate for
-        # type/lint regressions introduced by the rebased branding patch.
-        # Runtime smoke happens post-publish via `alfred telegram set`.
-        run: pnpm check
+        # We keep the broad static/type gates from `pnpm check`, but avoid the
+        # repo-wide `pnpm lint` lane because upstream stable tags can ship
+        # unrelated oxlint failures in files the Alfred fork does not touch.
+        # Instead, lint the fork-local JS/TS diff against the chosen upstream
+        # rebase target. Runtime smoke still happens post-publish via
+        # `alfred telegram set`.
+        run: |
+          pnpm check:no-conflict-markers
+          pnpm tool-display:check
+          pnpm check:host-env-policy:swift
+          pnpm tsgo:all
+
+          fork_lint_files=()
+          while IFS= read -r file; do
+            fork_lint_files+=("$file")
+          done < <(
+            git diff --name-only "${{ steps.stable.outputs.tag }}"..HEAD -- '*.ts' '*.tsx' '*.js' '*.mjs'
+          )
+          if [ "${#fork_lint_files[@]}" -gt 0 ]; then
+            pnpm exec oxlint "${fork_lint_files[@]}"
+          else
+            echo "No fork-local JS/TS files changed relative to ${{ steps.stable.outputs.tag }}; skipping targeted oxlint."
+          fi
+
+          pnpm lint:webhook:no-low-level-body-read
+          pnpm lint:auth:no-pairing-store-group
+          pnpm lint:auth:pairing-account-scope
+          pnpm check:import-cycles
+          pnpm check:madge-import-cycles
 
       - name: Bump fork version
         id: bump
