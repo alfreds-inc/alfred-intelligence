@@ -14,7 +14,8 @@
     "url": "git+https://github.com/alfreds-inc/alfred-intelligence.git"
   },
   "bin": {
-    "alfred-intelligence": "openclaw.mjs"
+    "alfred-intelligence": "openclaw.mjs",
+    "openclaw": "openclaw.mjs"
   },
   "directories": {
     "doc": "docs",
