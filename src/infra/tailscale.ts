@@ -377,7 +377,7 @@ export async function ensureFunnel(
     runtime.error("Failed to enable Tailscale Funnel. Is it allowed on your tailnet?");
     runtime.error(
       info(
-        `Tip: Funnel is optional for OpenClaw. You can keep running the web gateway without it: \`${formatCliCommand("openclaw gateway")}\``,
+        `Tip: Funnel is optional for Alfred. You can keep running the web gateway without it: \`${formatCliCommand("openclaw gateway")}\``,
       ),
     );
     if (shouldLogVerbose()) {
