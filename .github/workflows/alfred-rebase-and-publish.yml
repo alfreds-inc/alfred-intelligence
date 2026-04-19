@@ -1,30 +1,34 @@
-# Weekly rebase of the Alfred branding patch onto upstream openclaw + publish
-# to npm.
+# Weekly rebase of the Alfred branding patch onto upstream openclaw, then
+# publish a pre-built tarball as a GitHub Release asset.
 #
 # Flow:
 #   1. Fast-forward our `upstream-main` branch to openclaw/openclaw:main.
-#   2. Rebase `alfred-brand` onto `upstream-main`. On conflict, open an issue
+#   2. Resolve the latest upstream stable tag (`vYYYY.M.D` with no prerelease
+#      suffix) and rebase `alfred-brand` onto it. On conflict, open an issue
 #      and stop — humans resolve.
-#   3. Install deps, run upstream's own check suite on top of the rebased
-#      branding patch. If check fails, open an issue and stop.
+#   3. `pnpm install` + `pnpm check` (typecheck + lint + static checks). Test
+#      suite is intentionally skipped — see "Run check suite" note.
 #   4. Bump the fork version to `<upstream-stable>-alfred.<run-number>`.
-#   5. Commit, tag, push. Publish to npm with dist-tag `staging` so a human
-#      promotes `latest` after smoke-testing.
+#   5. Commit, tag, push.
+#   6. `pnpm pack` to build the tarball, rename it to the fixed filename
+#      `alfred-intelligence.tgz`, and attach as an asset on a GitHub Release.
+#      Release is created as prerelease — a human promotes it via
+#      `gh release edit <tag> --latest` once validated. Only non-prerelease
+#      releases are resolved by `releases/latest/download/…`, so the installer
+#      URL won't pick up unpromoted builds.
 #
-# Secrets required for full run (all optional — rebase still happens without
-# them, just the publish step gets skipped):
-#   - NPM_TOKEN: npm automation token with publish rights to
-#     @alfreds-inc/alfred-intelligence.
+# No npm registry, no NPM_TOKEN. Release assets ride on the default
+# GITHUB_TOKEN.
 
-name: Rebase on upstream + publish
+name: Rebase on upstream + publish GitHub Release
 
 on:
   schedule:
     - cron: "0 6 * * 1" # Mondays 06:00 UTC
   workflow_dispatch:
     inputs:
-      skip_publish:
-        description: "Rebase only; skip the npm publish step."
+      skip_release:
+        description: "Rebase and pack only; skip creating a GitHub Release."
         type: boolean
         default: false
 
@@ -141,19 +145,15 @@ jobs:
       - name: Run check suite
         id: check
         # We run `pnpm check` (typecheck + lint + static checks) rather than
-        # `pnpm test`. Upstream's test suite includes
-        # test/openclaw-npm-release-check.test.ts which hard-asserts
-        # package.name === "openclaw" and bin.openclaw === "openclaw.mjs";
-        # both fail on our rebrand by design. Typecheck is enough to catch
-        # regressions introduced by the rebased branding patch, and smoke
-        # verification happens post-publish via `alfred telegram set`.
+        # `pnpm test`. Full test runs invoke upstream fixtures we haven't had
+        # cycles to reconcile line-by-line; check is the defensive gate for
+        # type/lint regressions introduced by the rebased branding patch.
+        # Runtime smoke happens post-publish via `alfred telegram set`.
         run: pnpm check
 
       - name: Bump fork version
         id: bump
         run: |
-          # Anchor on the stable tag we rebased onto (already stripped of any
-          # prerelease suffix — we filtered those out above).
           base="${{ steps.stable.outputs.version }}"
           next="${base}-alfred.${GITHUB_RUN_NUMBER}"
           node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));p.version='${next}';fs.writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n');"
@@ -161,48 +161,90 @@ jobs:
           git commit -m "release: ${next}" --no-verify
           git tag -a "v${next}" -m "Alfred Intelligence ${next}"
           echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "tag=v${next}" >> "$GITHUB_OUTPUT"
 
       - name: Push rebased branch + tag
         run: |
           git push origin alfred-brand --force-with-lease
-          git push origin "v${{ steps.bump.outputs.version }}"
+          git push origin "${{ steps.bump.outputs.tag }}"
 
-      - name: Resolve npm publish gate
+      - name: Pack the npm tarball
+        id: pack
+        run: |
+          # `pnpm pack` runs prepack (build) and writes a .tgz into the repo.
+          # Rename to the fixed asset name Alfred's installer relies on:
+          # https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          pnpm pack
+          built_tarball="$(ls -1 *.tgz 2>/dev/null | head -1 || true)"
+          if [ -z "$built_tarball" ]; then
+            echo "::error::pnpm pack produced no tarball."
+            exit 1
+          fi
+          mv "$built_tarball" alfred-intelligence.tgz
+          asset_size="$(stat -c '%s' alfred-intelligence.tgz 2>/dev/null || stat -f '%z' alfred-intelligence.tgz)"
+          echo "asset=alfred-intelligence.tgz" >> "$GITHUB_OUTPUT"
+          echo "bytes=$asset_size" >> "$GITHUB_OUTPUT"
+          echo "Tarball: alfred-intelligence.tgz ($asset_size bytes)"
+
+      - name: Resolve release gate
         id: gate
         run: |
-          if [ -z "${NPM_TOKEN:-}" ]; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::NPM_TOKEN not configured; skipping publish."
-          elif [ "${{ github.event.inputs.skip_publish }}" = "true" ]; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::skip_publish input set; skipping publish."
+          if [ "${{ github.event.inputs.skip_release }}" = "true" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::skip_release input set; skipping GitHub Release creation."
           else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish to npm (staging dist-tag)
-        if: steps.gate.outputs.publish == 'true'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          pnpm publish --tag staging --no-git-checks --access public
+      - name: Create GitHub Release (prerelease)
+        if: steps.gate.outputs.release == 'true'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.bump.outputs.tag }}"
+          version="${{ steps.bump.outputs.version }}"
+          upstream_tag="${{ steps.stable.outputs.tag }}"
+          notes=$(cat <<EOF
+          Alfred Intelligence \`${version}\`.
+
+          Rebased onto upstream \`${upstream_tag}\`. Branding patch applies cleanly.
+
+          Asset: \`alfred-intelligence.tgz\` (fixed name for installer consumption).
+          Consume via:
+
+          \`\`\`
+          npm install -g https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          \`\`\`
+
+          **This release is created as a prerelease.** It will NOT appear at
+          \`releases/latest/download/…\` until promoted. After smoke-testing,
+          promote with:
+
+          \`\`\`
+          gh release edit ${tag} --prerelease=false --latest
+          \`\`\`
+          EOF
+          )
+          gh release create "$tag" alfred-intelligence.tgz \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Alfred Intelligence ${version}" \
+            --notes "$notes" \
+            --prerelease
 
       - name: Summary
         if: always()
         run: |
-          echo "### Alfred rebase + publish" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Alfred rebase + release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upstream stable tag: \`${{ steps.stable.outputs.tag || '(not resolved)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upstream sha: \`${{ steps.stable.outputs.sha || '(n/a)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Fork version: \`${{ steps.bump.outputs.version || '(not bumped)' }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Published to npm: \`${{ steps.gate.outputs.publish || 'false' }}\` (tag \`staging\`)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tarball: \`${{ steps.pack.outputs.asset || '(not packed)' }}\` (${{ steps.pack.outputs.bytes || '—' }} bytes)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GitHub Release: \`${{ steps.gate.outputs.release || 'false' }}\` (prerelease)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ steps.gate.outputs.publish }}" = "true" ]; then
+          if [ "${{ steps.gate.outputs.release }}" = "true" ]; then
             echo "Promote to \`latest\` once validated:" >> "$GITHUB_STEP_SUMMARY"
             echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-            echo "npm dist-tag add @alfreds-inc/alfred-intelligence@${{ steps.bump.outputs.version }} latest" >> "$GITHUB_STEP_SUMMARY"
+            echo "gh release edit ${{ steps.bump.outputs.tag }} --prerelease=false --latest" >> "$GITHUB_STEP_SUMMARY"
             echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           fi
