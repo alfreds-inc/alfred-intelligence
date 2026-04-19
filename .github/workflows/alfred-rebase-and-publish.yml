@@ -71,12 +71,13 @@ jobs:
       - name: Resolve latest upstream stable tag
         id: stable
         run: |
-          # Pick the latest `vYYYY.M.D` tag with no prerelease suffix.
-          # Rationale: upstream/main is often at -beta.N; rebasing onto a
-          # stable tag keeps our fork publishing stable code only.
-          # grep pattern starts with `-` which some grep variants parse as a
-          # flag — use a bracket class `[-]` to disambiguate portably.
-          stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -vE '[-](beta|alpha|rc|next)' | sort -V | tail -1)"
+          # Pick the latest `vYYYY.M.D` tag with no suffix (pure upstream
+          # calver stable). We anchor the pattern so our own fork tags like
+          # `v2026.4.15-alfred.4` don't win the `sort -V | tail -1` race —
+          # GNU sort treats `-alfred.4` as extending the base version and
+          # ranks it AFTER the bare tag, so a loose filter would point the
+          # rebase at our previous release instead of upstream.
+          stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
           if [ -z "$stable_tag" ]; then
             echo "::error::Could not find a stable upstream tag (v<YYYY>.<M>.<D>)."
             exit 1
