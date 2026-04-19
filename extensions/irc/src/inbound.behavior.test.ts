@@ -108,7 +108,7 @@ describe("irc inbound behavior", () => {
     expect(sendReply).toHaveBeenCalledTimes(1);
     expect(sendReply).toHaveBeenCalledWith(
       "alice",
-      expect.stringContaining("Alfred Intelligence: access not configured."),
+      expect.stringContaining("Hello, Alfred here"),
       undefined,
     );
     expect(sendReply).toHaveBeenCalledWith(
