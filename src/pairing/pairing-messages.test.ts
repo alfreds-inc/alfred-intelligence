@@ -49,20 +49,9 @@ describe("buildPairingReply", () => {
     },
   ] as const;
 
-  function expectPairingApproveCommand(text: string, testCase: (typeof pairingReplyCases)[number]) {
-    const commandRe = new RegExp(
-      `(?:alfred-intelligence|openclaw) --profile isolated pairing approve ${testCase.channel} ${testCase.code}`,
-    );
-    expect(text).toMatch(commandRe);
-  }
-
-  function expectProfileAwarePairingReply(testCase: (typeof pairingReplyCases)[number]) {
+  it.each(pairingReplyCases)("formats pairing reply for $channel", (testCase) => {
     const text = buildPairingReply(testCase);
     expectPairingReplyText(text, testCase);
-    expectPairingApproveCommand(text, testCase);
-  }
-
-  it.each(pairingReplyCases)("formats pairing reply for $channel", (testCase) => {
-    expectProfileAwarePairingReply(testCase);
+    expect(text).not.toMatch(/pairing approve/);
   });
 });

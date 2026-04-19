@@ -15,10 +15,9 @@ export function expectPairingReplyText(
   },
 ): string {
   const code = params.code ?? extractPairingCode(text);
-  expect(text).toContain("Alfred Intelligence: access not configured.");
+  expect(text).toContain("Hello, Alfred here");
   expect(text).toContain(params.idLine);
   expect(text).toContain("Pairing code:");
-  expect(text).toContain(`\n\`\`\`\n${code}\n\`\`\`\n`);
-  expect(text).toContain(`pairing approve ${params.channel} ${code}`);
+  expect(text).toContain(`\n\`\`\`\n${code}\n\`\`\``);
   return code;
 }
