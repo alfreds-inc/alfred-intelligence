@@ -74,7 +74,9 @@ jobs:
           # Pick the latest `vYYYY.M.D` tag with no prerelease suffix.
           # Rationale: upstream/main is often at -beta.N; rebasing onto a
           # stable tag keeps our fork publishing stable code only.
-          stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -vE '-(beta|alpha|rc|next)' | sort -V | tail -1)"
+          # grep pattern starts with `-` which some grep variants parse as a
+          # flag — use a bracket class `[-]` to disambiguate portably.
+          stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -vE '[-](beta|alpha|rc|next)' | sort -V | tail -1)"
           if [ -z "$stable_tag" ]; then
             echo "::error::Could not find a stable upstream tag (v<YYYY>.<M>.<D>)."
             exit 1
