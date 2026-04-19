@@ -57,6 +57,14 @@ export type NpmDistTagMirrorAuth = {
   hasAuth: boolean;
   source: "node-auth-token" | "npm-token" | "none";
 };
+// Accept upstream identity plus the @alfreds-inc/alfred-intelligence rebrand
+// so this script also passes against the Alfred fork without special-casing.
+const ALLOWED_REPOSITORY_URLS = new Set([
+  "https://github.com/openclaw/openclaw",
+  "https://github.com/alfreds-inc/alfred-intelligence",
+]);
+const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@alfreds-inc/alfred-intelligence"]);
+const ALLOWED_BIN_ENTRIES = new Set(["openclaw", "alfred-intelligence"]);
 const EXPECTED_REPOSITORY_URL = "https://github.com/openclaw/openclaw";
 const MAX_CALVER_DISTANCE_DAYS = 2;
 const LEGACY_UPDATE_COMPAT_PACKED_PATHS = [
@@ -249,8 +257,10 @@ export function collectReleasePackageMetadataErrors(pkg: PackageJson): string[] 
   );
   const errors: string[] = [];
 
-  if (pkg.name !== "openclaw") {
-    errors.push(`package.json name must be "openclaw"; found "${pkg.name ?? ""}".`);
+  if (!pkg.name || !ALLOWED_PACKAGE_NAMES.has(pkg.name)) {
+    errors.push(
+      `package.json name must be one of [${[...ALLOWED_PACKAGE_NAMES].join(", ")}]; found "${pkg.name ?? ""}".`,
+    );
   }
   if (!pkg.description?.trim()) {
     errors.push("package.json description must be non-empty.");
@@ -258,16 +268,22 @@ export function collectReleasePackageMetadataErrors(pkg: PackageJson): string[] 
   if (pkg.license !== "MIT") {
     errors.push(`package.json license must be "MIT"; found "${pkg.license ?? ""}".`);
   }
-  if (actualRepositoryUrl !== EXPECTED_REPOSITORY_URL) {
+  if (!actualRepositoryUrl || !ALLOWED_REPOSITORY_URLS.has(actualRepositoryUrl)) {
     errors.push(
-      `package.json repository.url must resolve to ${EXPECTED_REPOSITORY_URL}; found ${
+      `package.json repository.url must resolve to one of [${[...ALLOWED_REPOSITORY_URLS].join(", ")}]; found ${
         actualRepositoryUrl || "<missing>"
       }.`,
     );
   }
-  if (pkg.bin?.openclaw !== "openclaw.mjs") {
+  const binEntries = Object.entries(pkg.bin ?? {});
+  const hasValidBinEntry = binEntries.some(
+    ([key, value]) => ALLOWED_BIN_ENTRIES.has(key) && value === "openclaw.mjs",
+  );
+  if (!hasValidBinEntry) {
     errors.push(
-      `package.json bin.openclaw must be "openclaw.mjs"; found "${pkg.bin?.openclaw ?? ""}".`,
+      `package.json bin must map at least one of [${[...ALLOWED_BIN_ENTRIES].join(", ")}] to "openclaw.mjs"; found ${
+        JSON.stringify(pkg.bin ?? {})
+      }.`,
     );
   }
   if (pkg.peerDependencies?.["node-llama-cpp"] !== "3.18.1") {
