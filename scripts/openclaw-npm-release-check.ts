@@ -65,7 +65,6 @@ const ALLOWED_REPOSITORY_URLS = new Set([
 ]);
 const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@alfreds-inc/alfred-intelligence"]);
 const ALLOWED_BIN_ENTRIES = new Set(["openclaw", "alfred-intelligence"]);
-const EXPECTED_REPOSITORY_URL = "https://github.com/openclaw/openclaw";
 const MAX_CALVER_DISTANCE_DAYS = 2;
 const LEGACY_UPDATE_COMPAT_PACKED_PATHS = [
   "dist/extensions/qa-channel/runtime-api.js",
