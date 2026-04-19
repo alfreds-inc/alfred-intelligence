@@ -1,20 +1,20 @@
 {
-  "name": "openclaw",
+  "name": "@alfreds-inc/alfred-intelligence",
   "version": "2026.5.2",
   "description": "Multi-channel AI gateway with extensible messaging integrations",
   "keywords": [],
-  "homepage": "https://github.com/openclaw/openclaw#readme",
+  "homepage": "https://github.com/alfreds-inc/alfred-intelligence#readme",
   "bugs": {
-    "url": "https://github.com/openclaw/openclaw/issues"
+    "url": "https://github.com/alfreds-inc/alfred-intelligence/issues"
   },
   "license": "MIT",
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openclaw/openclaw.git"
+    "url": "git+https://github.com/alfreds-inc/alfred-intelligence.git"
   },
   "bin": {
-    "openclaw": "openclaw.mjs"
+    "alfred-intelligence": "openclaw.mjs"
   },
   "directories": {
     "doc": "docs",
@@ -1802,5 +1802,9 @@
       "@whiskeysockets/baileys@7.0.0-rc.9": "patches/@whiskeysockets__baileys@7.0.0-rc.9.patch",
       "@agentclientprotocol/claude-agent-acp@0.31.4": "patches/@agentclientprotocol__claude-agent-acp@0.31.4.patch"
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
