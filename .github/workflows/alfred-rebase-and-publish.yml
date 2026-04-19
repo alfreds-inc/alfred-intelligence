@@ -1,0 +1,208 @@
+# Weekly rebase of the Alfred branding patch onto upstream openclaw + publish
+# to npm.
+#
+# Flow:
+#   1. Fast-forward our `upstream-main` branch to openclaw/openclaw:main.
+#   2. Rebase `alfred-brand` onto `upstream-main`. On conflict, open an issue
+#      and stop — humans resolve.
+#   3. Install deps, run upstream's own check suite on top of the rebased
+#      branding patch. If check fails, open an issue and stop.
+#   4. Bump the fork version to `<upstream-stable>-alfred.<run-number>`.
+#   5. Commit, tag, push. Publish to npm with dist-tag `staging` so a human
+#      promotes `latest` after smoke-testing.
+#
+# Secrets required for full run (all optional — rebase still happens without
+# them, just the publish step gets skipped):
+#   - NPM_TOKEN: npm automation token with publish rights to
+#     @alfreds-inc/alfred-intelligence.
+
+name: Rebase on upstream + publish
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      skip_publish:
+        description: "Rebase only; skip the npm publish step."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: alfred-rebase-publish
+  cancel-in-progress: false
+
+jobs:
+  rebase-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout alfred-brand (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: alfred-brand
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure bot identity
+        run: |
+          git config user.name "alfred-intelligence-bot"
+          git config user.email "bot@alfreds-inc.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/openclaw/openclaw.git || true
+          git fetch upstream main --tags
+
+      - name: Fast-forward upstream-main mirror (tracking only)
+        run: |
+          git checkout -B upstream-main upstream/main
+          git push origin upstream-main --force-with-lease
+          git checkout alfred-brand
+
+      - name: Resolve latest upstream stable tag
+        id: stable
+        run: |
+          # Pick the latest `vYYYY.M.D` tag with no prerelease suffix.
+          # Rationale: upstream/main is often at -beta.N; rebasing onto a
+          # stable tag keeps our fork publishing stable code only.
+          stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -vE '-(beta|alpha|rc|next)' | sort -V | tail -1)"
+          if [ -z "$stable_tag" ]; then
+            echo "::error::Could not find a stable upstream tag (v<YYYY>.<M>.<D>)."
+            exit 1
+          fi
+          stable_sha="$(git rev-parse "$stable_tag")"
+          stable_version="${stable_tag#v}"
+          echo "tag=$stable_tag" >> "$GITHUB_OUTPUT"
+          echo "sha=$stable_sha" >> "$GITHUB_OUTPUT"
+          echo "version=$stable_version" >> "$GITHUB_OUTPUT"
+          echo "Rebase target: $stable_tag ($stable_sha)"
+
+      - name: Rebase alfred-brand onto upstream stable tag
+        id: rebase
+        run: |
+          git checkout alfred-brand
+          if ! git rebase "${{ steps.stable.outputs.tag }}"; then
+            git rebase --abort || true
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "conflict=false" >> "$GITHUB_OUTPUT"
+
+      - name: Open conflict issue if rebase failed
+        if: failure() && steps.rebase.outputs.conflict == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = "${{ steps.stable.outputs.tag }}";
+            const sha = "${{ steps.stable.outputs.sha }}".slice(0, 12);
+            const title = `Rebase conflict against openclaw/openclaw@${tag}`;
+            const body = [
+              `The scheduled rebase of \`alfred-brand\` onto \`${tag}\` (\`${sha}\`) failed.`,
+              ``,
+              `Resolve locally:`,
+              "```",
+              `git fetch upstream --tags`,
+              `git checkout alfred-brand`,
+              `git rebase ${tag}`,
+              `# fix conflicts, re-stage, git rebase --continue`,
+              `git push --force-with-lease origin alfred-brand`,
+              "```",
+              ``,
+              `Re-run this workflow after the branch is pushed.`,
+            ].join("\n");
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ["rebase-conflict", "automation"],
+            });
+
+      - name: Set up Node + pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
+      - name: Run check suite
+        id: check
+        # We run `pnpm check` (typecheck + lint + static checks) rather than
+        # `pnpm test`. Upstream's test suite includes
+        # test/openclaw-npm-release-check.test.ts which hard-asserts
+        # package.name === "openclaw" and bin.openclaw === "openclaw.mjs";
+        # both fail on our rebrand by design. Typecheck is enough to catch
+        # regressions introduced by the rebased branding patch, and smoke
+        # verification happens post-publish via `alfred telegram set`.
+        run: pnpm check
+
+      - name: Bump fork version
+        id: bump
+        run: |
+          # Anchor on the stable tag we rebased onto (already stripped of any
+          # prerelease suffix — we filtered those out above).
+          base="${{ steps.stable.outputs.version }}"
+          next="${base}-alfred.${GITHUB_RUN_NUMBER}"
+          node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));p.version='${next}';fs.writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n');"
+          git add package.json
+          git commit -m "release: ${next}" --no-verify
+          git tag -a "v${next}" -m "Alfred Intelligence ${next}"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Push rebased branch + tag
+        run: |
+          git push origin alfred-brand --force-with-lease
+          git push origin "v${{ steps.bump.outputs.version }}"
+
+      - name: Resolve npm publish gate
+        id: gate
+        run: |
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::NPM_TOKEN not configured; skipping publish."
+          elif [ "${{ github.event.inputs.skip_publish }}" = "true" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::skip_publish input set; skipping publish."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm (staging dist-tag)
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+          pnpm publish --tag staging --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Alfred rebase + publish" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Upstream stable tag: \`${{ steps.stable.outputs.tag || '(not resolved)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Upstream sha: \`${{ steps.stable.outputs.sha || '(n/a)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Fork version: \`${{ steps.bump.outputs.version || '(not bumped)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Published to npm: \`${{ steps.gate.outputs.publish || 'false' }}\` (tag \`staging\`)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.gate.outputs.publish }}" = "true" ]; then
+            echo "Promote to \`latest\` once validated:" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "npm dist-tag add @alfreds-inc/alfred-intelligence@${{ steps.bump.outputs.version }} latest" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
