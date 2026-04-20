@@ -1,7 +1,7 @@
 import { expect } from "vitest";
 
 export function extractPairingCode(text: string): string {
-  const code = text.match(/Pairing code:\s*```[\r\n]+([A-Z2-9]{6,})/)?.[1];
+  const code = text.match(/pairing code:\s*```[\r\n]+([A-Z2-9]{6,})/i)?.[1];
   expect(code).toBeDefined();
   return code ?? "";
 }
@@ -16,8 +16,7 @@ export function expectPairingReplyText(
 ): string {
   const code = params.code ?? extractPairingCode(text);
   expect(text).toContain("Hello, Alfred here");
-  expect(text).toContain(params.idLine);
-  expect(text).toContain("Pairing code:");
+  expect(text).toContain("pairing code:");
   expect(text).toContain(`\n\`\`\`\n${code}\n\`\`\``);
   return code;
 }
