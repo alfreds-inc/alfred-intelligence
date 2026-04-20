@@ -62,10 +62,17 @@ jobs:
           git remote add upstream https://github.com/openclaw/openclaw.git || true
           git fetch upstream main --tags
 
-      - name: Fast-forward upstream-main mirror (tracking only)
+      - name: Fast-forward upstream-main mirror (tracking only, best-effort)
         run: |
+          # upstream-main is an informational mirror of openclaw/openclaw:main
+          # visible on our fork. It's NOT used by the rebase or publish steps.
+          # The default GITHUB_TOKEN lacks the `workflows` permission, so pushes
+          # that touch upstream's `.github/workflows/*` fail. Swallow those so
+          # a workflow-file churn upstream doesn't block our release pipeline.
           git checkout -B upstream-main upstream/main
-          git push origin upstream-main --force-with-lease
+          if ! git push origin upstream-main --force-with-lease; then
+            echo "::warning::Could not fast-forward upstream-main (likely workflow-file churn upstream). Continuing; upstream/main ref is still up to date locally and drives the rebase."
+          fi
           git checkout alfred-brand
 
       - name: Resolve latest upstream stable tag
