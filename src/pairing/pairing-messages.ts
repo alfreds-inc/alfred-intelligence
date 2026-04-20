@@ -6,11 +6,9 @@ export function buildPairingReply(params: {
   code: string;
 }): string {
   return [
-    "Hello, Alfred here 👋🏼",
+    "*Hello, Alfred here 👋🏼*",
     "",
-    params.idLine,
-    "",
-    "Pairing code:",
+    "This is your pairing code:",
     "```",
     params.code,
     "```",

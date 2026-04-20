@@ -111,11 +111,6 @@ describe("irc inbound behavior", () => {
       expect.stringContaining("Hello, Alfred here"),
       undefined,
     );
-    expect(sendReply).toHaveBeenCalledWith(
-      "alice",
-      expect.stringContaining("Your IRC id: alice!ident@example.com"),
-      undefined,
-    );
     expect(sendReply).toHaveBeenCalledWith("alice", expect.stringContaining("CODE"), undefined);
   });
 
