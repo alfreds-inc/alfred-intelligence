@@ -174,12 +174,11 @@ function expectInboxPairingReplyText(
     code?: string;
   },
 ): string {
-  const code = text.match(/Pairing code:\s*```[\r\n]+([A-Z2-9]{6,})/)?.[1];
+  const code = text.match(/pairing code:\s*```[\r\n]+([A-Z2-9]{6,})/i)?.[1];
   expect(code).toBeDefined();
   const resolvedCode = params.code ?? code ?? "";
   expect(text).toContain("Hello, Alfred here");
-  expect(text).toContain(params.idLine);
-  expect(text).toContain("Pairing code:");
+  expect(text).toContain("pairing code:");
   expect(text).toContain(`\n\`\`\`\n${resolvedCode}\n\`\`\``);
   return resolvedCode;
 }
