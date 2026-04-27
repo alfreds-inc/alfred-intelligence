@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout alfred-brand (full history)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: alfred-brand
           fetch-depth: 0
@@ -109,7 +109,7 @@ jobs:
 
       - name: Open conflict issue if rebase failed
         if: failure() && steps.rebase.outputs.conflict == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = "${{ steps.stable.outputs.tag }}";
@@ -129,13 +129,19 @@ jobs:
               ``,
               `Re-run this workflow after the branch is pushed.`,
             ].join("\n");
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title,
-              body,
-              labels: ["rebase-conflict", "automation"],
-            });
+            try {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["rebase-conflict", "automation"],
+              });
+            } catch (error) {
+              const status = error && typeof error === "object" && "status" in error ? error.status : "unknown";
+              const message = error instanceof Error ? error.message : String(error);
+              core.warning(`Could not open rebase conflict issue (status ${status}): ${message}`);
+            }
 
       # Read pnpm version from package.json's `packageManager` field rather
       # than pinning it here — pnpm/action-setup@v4 errors if the inputs
@@ -143,7 +149,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
