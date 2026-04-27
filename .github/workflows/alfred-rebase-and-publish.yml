@@ -211,13 +211,33 @@ jobs:
       - name: Pack the npm tarball
         id: pack
         run: |
-          # `pnpm pack` runs prepack (build) and writes a .tgz into the repo.
-          # Rename to the fixed asset name Alfred's installer relies on:
+          # Run prepack explicitly, then remove generated dependency trees that
+          # package.json excludes. npm/pnpm still walks excluded trees while
+          # applying packlist filters, and those extension runtime deps dominate
+          # the runner's file count.
+          pnpm run prepack
+          if [ -d dist/extensions ]; then
+            find dist/extensions -path '*/node_modules' -type d -prune -exec rm -rf {} +
+            find dist/extensions -path '*/.openclaw-runtime-deps-*' -type d -prune -exec rm -rf {} +
+            find dist/extensions -name '.openclaw-runtime-deps-stamp.json' -type f -delete
+          fi
+          du -sh dist dist/extensions 2>/dev/null || true
+
+          # Pack without rerunning prepack, and write the fixed asset name
+          # Alfred's installer relies on. Use npm for the final tarball: pnpm
+          # can still spend minutes calculating the packlist from the installed
+          # workspace graph after the build is complete.
           # https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
-          pnpm pack
-          built_tarball="$(ls -1 *.tgz 2>/dev/null | head -1 || true)"
+          pack_log="$(mktemp)"
+          pack_dir="$(mktemp -d)"
+          if ! npm pack --ignore-scripts --pack-destination "$pack_dir" >"$pack_log" 2>&1; then
+            cat "$pack_log"
+            exit 1
+          fi
+          sed -n '/^npm notice Tarball Details/,$p' "$pack_log"
+          built_tarball="$(find "$pack_dir" -maxdepth 1 -name '*.tgz' -type f | head -1 || true)"
           if [ -z "$built_tarball" ]; then
-            echo "::error::pnpm pack produced no tarball."
+            echo "::error::npm pack produced no tarball."
             exit 1
           fi
           mv "$built_tarball" alfred-intelligence.tgz
