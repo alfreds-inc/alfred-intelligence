@@ -12,10 +12,9 @@
 #   5. Commit, tag, push.
 #   6. `pnpm pack` to build the tarball, rename it to the fixed filename
 #      `alfred-intelligence.tgz`, and attach as an asset on a GitHub Release.
-#      Release is created as prerelease — a human promotes it via
-#      `gh release edit <tag> --latest` once validated. Only non-prerelease
-#      releases are resolved by `releases/latest/download/…`, so the installer
-#      URL won't pick up unpromoted builds.
+#      Release is published as the latest normal release so
+#      `releases/latest/download/…` immediately resolves to the tarball the
+#      installer consumes.
 #
 # No npm registry, no NPM_TOKEN. Release assets ride on the default
 # GITHUB_TOKEN.
@@ -256,7 +255,7 @@ jobs:
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create GitHub Release (prerelease)
+      - name: Create GitHub Release
         if: steps.gate.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -276,20 +275,16 @@ jobs:
           npm install -g https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
           \`\`\`
 
-          **This release is created as a prerelease.** It will NOT appear at
-          \`releases/latest/download/…\` until promoted. After smoke-testing,
-          promote with:
-
-          \`\`\`
-          gh release edit ${tag} --prerelease=false --latest
-          \`\`\`
+          This release is published as the latest normal GitHub Release so
+          fresh installs using \`releases/latest/download/…\` consume this
+          tarball immediately.
           EOF
           )
           gh release create "$tag" alfred-intelligence.tgz \
             --repo "$GITHUB_REPOSITORY" \
             --title "Alfred Intelligence ${version}" \
             --notes "$notes" \
-            --prerelease
+            --latest
 
       - name: Summary
         if: always()
@@ -300,11 +295,5 @@ jobs:
           echo "- Upstream sha: \`${{ steps.stable.outputs.sha || '(n/a)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Fork version: \`${{ steps.bump.outputs.version || '(not bumped)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Tarball: \`${{ steps.pack.outputs.asset || '(not packed)' }}\` (${{ steps.pack.outputs.bytes || '—' }} bytes)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- GitHub Release: \`${{ steps.gate.outputs.release || 'false' }}\` (prerelease)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GitHub Release: \`${{ steps.gate.outputs.release || 'false' }}\` (latest)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ steps.gate.outputs.release }}" = "true" ]; then
-            echo "Promote to \`latest\` once validated:" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-            echo "gh release edit ${{ steps.bump.outputs.tag }} --prerelease=false --latest" >> "$GITHUB_STEP_SUMMARY"
-            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-          fi
