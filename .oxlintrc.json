@@ -26,6 +26,7 @@
     "eslint/no-self-compare": "error",
     "eslint/no-shadow": "off",
     "eslint/no-var": "error",
+    "eslint/no-underscore-dangle": ["error", { "allow": ["__testing"] }],
     "eslint/no-useless-call": "error",
     "eslint/no-useless-computed-key": "error",
     "eslint/no-useless-concat": "error",
