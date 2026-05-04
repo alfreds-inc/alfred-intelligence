@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   dispatch-translate:
+    if: ${{ !contains(github.event.release.tag_name, '-alfred.') }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger locale translates in publish repo
