@@ -4,12 +4,16 @@
 # Flow:
 #   1. Fast-forward our `upstream-main` branch to openclaw/openclaw:main.
 #   2. Resolve the latest upstream stable tag (`vYYYY.M.D` with no prerelease
-#      suffix) and rebase `alfred-brand` onto it. On conflict, open an issue
-#      and stop — humans resolve.
+#      suffix) and replay only the Alfred fork commits onto it. Upstream stable
+#      tags are not always linear with each other, so replaying from the
+#      previous fork base avoids dragging old upstream release commits forward.
+#      On conflict, open an issue and stop — humans resolve.
 #   3. `pnpm install` + `pnpm check` (typecheck + lint + static checks). Test
 #      suite is intentionally skipped — see "Run check suite" note.
 #   4. Bump the fork version to `<upstream-stable>-alfred.<run-number>`.
-#   5. Commit, tag, push.
+#   5. Push the rebased branch, then create a release-only bump commit and tag.
+#      The bump commit is intentionally left on the tag only so the next rebase
+#      does not have to replay stale `release:` commits.
 #   6. `pnpm pack` to build the tarball, rename it to the fixed filename
 #      `alfred-intelligence.tgz`, and attach as an asset on a GitHub Release.
 #      Release is published as the latest normal release so
@@ -95,14 +99,58 @@ jobs:
           echo "version=$stable_version" >> "$GITHUB_OUTPUT"
           echo "Rebase target: $stable_tag ($stable_sha)"
 
+      - name: Resolve current fork base tag
+        id: base
+        run: |
+          current_version="$(
+            node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));const m=/^([0-9]+\\.[0-9]+\\.[0-9]+)(?:-alfred\\.[0-9]+)?$/.exec(p.version);if(!m){process.exit(1)}process.stdout.write(m[1]);"
+          )"
+          current_tag="v${current_version}"
+          if git rev-parse -q --verify "${current_tag}^{commit}" >/dev/null && git merge-base --is-ancestor "$current_tag" HEAD; then
+            echo "tag=$current_tag" >> "$GITHUB_OUTPUT"
+            echo "version=$current_version" >> "$GITHUB_OUTPUT"
+            echo "Current fork base: $current_tag"
+          else
+            echo "::warning::Could not verify current fork base tag ${current_tag}; falling back to a plain rebase."
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "version=$current_version" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rebase alfred-brand onto upstream stable tag
         id: rebase
         run: |
           git checkout alfred-brand
-          if ! git rebase "${{ steps.stable.outputs.tag }}"; then
-            git rebase --abort || true
-            echo "conflict=true" >> "$GITHUB_OUTPUT"
-            exit 1
+          target="${{ steps.stable.outputs.tag }}"
+          current="${{ steps.base.outputs.tag }}"
+
+          if [ -n "$current" ] && [ "$current" != "$target" ]; then
+            echo "Replaying fork-local commits from ${current}..HEAD onto ${target}."
+            if ! (
+              set -e
+              mapfile -t fork_commits < <(git rev-list --reverse "${current}..HEAD")
+              git checkout -B alfred-brand-rebased "$target"
+              for commit in "${fork_commits[@]}"; do
+                subject="$(git log -1 --format=%s "$commit")"
+                if [[ "$subject" =~ ^release:\ [0-9]+\.[0-9]+\.[0-9]+-alfred\.[0-9]+$ ]]; then
+                  echo "::notice::Skipping previous release-only commit ${commit:0:12}: ${subject}"
+                  continue
+                fi
+                git cherry-pick --empty=drop "$commit"
+              done
+              git branch -f alfred-brand HEAD
+              git checkout alfred-brand
+            ); then
+              git cherry-pick --abort || true
+              git checkout alfred-brand || true
+              echo "conflict=true" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+          else
+            if ! git rebase "$target"; then
+              git rebase --abort || true
+              echo "conflict=true" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
           fi
           echo "conflict=false" >> "$GITHUB_OUTPUT"
 
@@ -121,7 +169,7 @@ jobs:
               "```",
               `git fetch upstream --tags`,
               `git checkout alfred-brand`,
-              `git rebase ${tag}`,
+              `git rebase --onto ${tag} ${{ steps.base.outputs.tag || '<previous-upstream-base-tag>' }} alfred-brand`,
               `# fix conflicts, re-stage, git rebase --continue`,
               `git push --force-with-lease origin alfred-brand`,
               "```",
@@ -190,6 +238,9 @@ jobs:
           pnpm check:import-cycles
           pnpm check:madge-import-cycles
 
+      - name: Push rebased branch
+        run: git push origin HEAD:alfred-brand --force-with-lease
+
       - name: Bump fork version
         id: bump
         run: |
@@ -202,10 +253,8 @@ jobs:
           echo "version=$next" >> "$GITHUB_OUTPUT"
           echo "tag=v${next}" >> "$GITHUB_OUTPUT"
 
-      - name: Push rebased branch + tag
-        run: |
-          git push origin alfred-brand --force-with-lease
-          git push origin "${{ steps.bump.outputs.tag }}"
+      - name: Push release tag
+        run: git push origin "${{ steps.bump.outputs.tag }}"
 
       - name: Pack the npm tarball
         id: pack
