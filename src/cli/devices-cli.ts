@@ -86,6 +86,11 @@ type ApprovePairingGatewayPlan = {
   scopes?: OperatorScope[];
 };
 
+type PairingListFallbackResult = {
+  list: DevicePairingList;
+  usedFallback: boolean;
+};
+
 const FALLBACK_NOTICE = "Direct scope access failed; using local fallback.";
 const DEFAULT_DEVICES_TIMEOUT_MS = 10_000;
 const OPERATOR_ROLE = "operator";
@@ -178,9 +183,12 @@ function redactLocalPairedDevice(device: InfraPairedDevice): PairedDevice {
   };
 }
 
-async function listPairingWithFallback(opts: DevicesRpcOpts): Promise<DevicePairingList> {
+async function loadPairingWithFallback(opts: DevicesRpcOpts): Promise<PairingListFallbackResult> {
   try {
-    return parseDevicePairingList(await callGatewayCli("device.pair.list", opts, {}));
+    return {
+      list: parseDevicePairingList(await callGatewayCli("device.pair.list", opts, {})),
+      usedFallback: false,
+    };
   } catch (error) {
     if (!shouldUseLocalPairingFallback(opts, error)) {
       throw error;
@@ -190,10 +198,17 @@ async function listPairingWithFallback(opts: DevicesRpcOpts): Promise<DevicePair
     }
     const local = await listDevicePairing();
     return {
-      pending: local.pending as PendingDevice[],
-      paired: local.paired.map((device) => redactLocalPairedDevice(device)),
+      list: {
+        pending: local.pending as PendingDevice[],
+        paired: local.paired.map((device) => redactLocalPairedDevice(device)),
+      },
+      usedFallback: true,
     };
   }
+}
+
+async function listPairingWithFallback(opts: DevicesRpcOpts): Promise<DevicePairingList> {
+  return (await loadPairingWithFallback(opts)).list;
 }
 
 async function approvePairingWithFallback(
@@ -320,8 +335,10 @@ async function resolveApprovePairingGatewayPlan(
   requestId: string,
 ): Promise<ApprovePairingGatewayPlan> {
   try {
-    const list = await listPairingWithFallback(opts);
-    const request = list.pending?.find((pending) => pending.requestId === requestId);
+    const { list, usedFallback } = await loadPairingWithFallback(opts);
+    const request =
+      list.pending?.find((pending) => pending.requestId === requestId) ??
+      (usedFallback && list.pending?.length === 1 ? list.pending[0] : undefined);
     if (!request) {
       return {};
     }

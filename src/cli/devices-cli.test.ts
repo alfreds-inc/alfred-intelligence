@@ -632,6 +632,61 @@ describe("devices cli local fallback", () => {
     expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("(req-new)"));
   });
 
+  it("keeps tracking a superseded local request when the planning list already replaced the original id", async () => {
+    rejectGatewayForLocalFallback(
+      "scope upgrade pending approval (requestId: req-plan)\nGatewayTransportError: gateway closed (1008): pairing required",
+    );
+    listDevicePairing.mockResolvedValueOnce({
+      pending: [
+        pendingDevice({
+          requestId: "req-plan",
+          publicKey: "pk",
+          isRepair: true,
+          scopes: ["operator.admin", "operator.pairing"],
+          ts: 2,
+        }),
+      ],
+      paired: [
+        pairedDevice({
+          publicKey: "pk",
+          tokens: [{ role: "operator", scopes: ["operator.read"] }],
+        }),
+      ],
+    });
+    rejectGatewayForLocalFallback(
+      "scope upgrade pending approval (requestId: req-final)\nGatewayTransportError: gateway closed (1008): pairing required: device is asking for more scopes than currently approved",
+    );
+    listDevicePairing.mockResolvedValueOnce({
+      pending: [
+        pendingDevice({
+          requestId: "req-final",
+          publicKey: "pk",
+          isRepair: true,
+          scopes: ["operator.admin", "operator.pairing"],
+          ts: 3,
+        }),
+      ],
+      paired: [],
+    });
+    approveDevicePairing.mockResolvedValueOnce({
+      status: "approved",
+      requestId: "req-final",
+      device: {
+        deviceId: "device-1",
+        publicKey: "pk",
+        approvedAtMs: 1,
+        createdAtMs: 1,
+      },
+    });
+
+    await runDevicesApprove(["req-old"]);
+
+    expect(approveDevicePairing).toHaveBeenCalledWith("req-final", {
+      callerScopes: ["operator.admin"],
+    });
+    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("(req-final)"));
+  });
+
   it("does not rewrite local fallback approval to a different public key", async () => {
     callGateway.mockResolvedValueOnce({
       pending: [
