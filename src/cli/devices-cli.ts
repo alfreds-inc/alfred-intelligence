@@ -19,6 +19,7 @@ import {
   type DevicePairingAccessSummary,
   type PendingDeviceApprovalKind,
 } from "../shared/device-pairing-access.js";
+import { roleScopesAllow } from "../shared/operator-scope-compat.js";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
@@ -78,6 +79,11 @@ type PairedDevice = {
 type DevicePairingList = {
   pending?: PendingDevice[];
   paired?: PairedDevice[];
+};
+
+type ApprovePairingGatewayPlan = {
+  request?: PendingDevice;
+  scopes?: OperatorScope[];
 };
 
 const FALLBACK_NOTICE = "Direct scope access failed; using local fallback.";
@@ -194,16 +200,16 @@ async function approvePairingWithFallback(
   opts: DevicesRpcOpts,
   requestId: string,
 ): Promise<Record<string, unknown> | null> {
-  const scopes = await resolveApprovePairingGatewayScopes(opts, requestId);
+  const plan = await resolveApprovePairingGatewayPlan(opts, requestId);
   try {
     return await callGatewayCli(
       "device.pair.approve",
       opts,
       { requestId },
-      scopes ? { scopes } : undefined,
+      plan.scopes ? { scopes: plan.scopes } : undefined,
     );
   } catch (error) {
-    if (isDevicePairingApprovalDenied(error) && !scopes?.includes(ADMIN_SCOPE)) {
+    if (isDevicePairingApprovalDenied(error) && !plan.scopes?.includes(ADMIN_SCOPE)) {
       return await callGatewayCli(
         "device.pair.approve",
         opts,
@@ -217,7 +223,8 @@ async function approvePairingWithFallback(
     if (opts.json !== true) {
       defaultRuntime.log(theme.warn(FALLBACK_NOTICE));
     }
-    const approved = await approveDevicePairing(requestId, {
+    const localRequestId = await resolveLocalFallbackApprovalRequestId(requestId, plan.request);
+    const approved = await approveDevicePairing(localRequestId, {
       // Local CLI fallback already assumes direct machine access; treat it as an
       // explicit admin approval path instead of relying on missing caller scopes.
       callerScopes: ["operator.admin"],
@@ -229,7 +236,7 @@ async function approvePairingWithFallback(
       throw new Error(formatDevicePairingForbiddenMessage(approved), { cause: error });
     }
     return {
-      requestId,
+      requestId: localRequestId,
       device: redactLocalPairedDevice(approved.device),
     };
   }
@@ -308,22 +315,25 @@ function resolveApprovePairingScopesForRequest(
   return [...out];
 }
 
-async function resolveApprovePairingGatewayScopes(
+async function resolveApprovePairingGatewayPlan(
   opts: DevicesRpcOpts,
   requestId: string,
-): Promise<OperatorScope[] | undefined> {
+): Promise<ApprovePairingGatewayPlan> {
   try {
     const list = await listPairingWithFallback(opts);
     const request = list.pending?.find((pending) => pending.requestId === requestId);
     if (!request) {
-      return undefined;
+      return {};
     }
-    return resolveApprovePairingScopesForRequest(
+    return {
       request,
-      lookupPairedDevice(indexPairedDevices(list.paired), request),
-    );
+      scopes: resolveApprovePairingScopesForRequest(
+        request,
+        lookupPairedDevice(indexPairedDevices(list.paired), request),
+      ),
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -336,6 +346,105 @@ function selectLatestPendingRequest(pending: PendingDevice[] | undefined) {
     const currentTs = typeof current.ts === "number" ? current.ts : 0;
     return currentTs > latestTs ? current : latest;
   });
+}
+
+function sameNormalizedStringSet(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  const rightSet = new Set(right);
+  return left.every((value) => rightSet.has(value));
+}
+
+function requestedScopesAllowedByRoles(params: {
+  roles: readonly string[];
+  requestedScopes: readonly string[];
+  allowedScopes: readonly string[];
+}): boolean {
+  return params.requestedScopes.every((scope) =>
+    params.roles.some((role) =>
+      roleScopesAllow({
+        role,
+        requestedScopes: [scope],
+        allowedScopes: params.allowedScopes,
+      }),
+    ),
+  );
+}
+
+function pendingRequestMatchesSupersededApproval(
+  candidate: PendingDevice,
+  original: PendingDevice,
+): boolean {
+  const originalDeviceId = normalizeOptionalString(original.deviceId);
+  const candidateDeviceId = normalizeOptionalString(candidate.deviceId);
+  if (!originalDeviceId || candidateDeviceId !== originalDeviceId) {
+    return false;
+  }
+  const originalPublicKey = normalizeOptionalString(original.publicKey);
+  const candidatePublicKey = normalizeOptionalString(candidate.publicKey);
+  if (!originalPublicKey || candidatePublicKey !== originalPublicKey) {
+    return false;
+  }
+  if (Boolean(candidate.isRepair) !== Boolean(original.isRepair)) {
+    return false;
+  }
+
+  const originalRoles = normalizeDeviceRoles(original).toSorted();
+  const candidateRoles = normalizeDeviceRoles(candidate).toSorted();
+  if (!sameNormalizedStringSet(candidateRoles, originalRoles)) {
+    return false;
+  }
+
+  const originalScopes = normalizeDeviceAuthScopes(original.scopes);
+  const candidateScopes = normalizeDeviceAuthScopes(candidate.scopes);
+  return (
+    requestedScopesAllowedByRoles({
+      roles: originalRoles,
+      requestedScopes: originalScopes,
+      allowedScopes: candidateScopes,
+    }) &&
+    requestedScopesAllowedByRoles({
+      roles: originalRoles,
+      requestedScopes: candidateScopes,
+      allowedScopes: originalScopes,
+    })
+  );
+}
+
+function selectCurrentLocalPendingRequest(
+  pending: PendingDevice[] | undefined,
+  original: PendingDevice,
+  requestId: string,
+): PendingDevice | null {
+  const exact = pending?.find((candidate) => candidate.requestId === requestId);
+  if (exact) {
+    return exact;
+  }
+  return selectLatestPendingRequest(
+    pending?.filter((candidate) => pendingRequestMatchesSupersededApproval(candidate, original)),
+  );
+}
+
+async function resolveLocalFallbackApprovalRequestId(
+  requestId: string,
+  original: PendingDevice | undefined,
+): Promise<string> {
+  if (!original) {
+    return requestId;
+  }
+  try {
+    const local = await listDevicePairing();
+    return (
+      selectCurrentLocalPendingRequest(
+        local.pending as PendingDevice[] | undefined,
+        original,
+        requestId,
+      )?.requestId ?? requestId
+    );
+  } catch {
+    return requestId;
+  }
 }
 
 function formatTokenSummary(tokens: DeviceTokenSummary[] | undefined) {
@@ -723,8 +832,11 @@ export function registerDevicesCli(program: Command) {
           return;
         }
         const deviceId = (result as { device?: { deviceId?: string } })?.device?.deviceId;
+        const approvedRequestId =
+          normalizeOptionalString((result as { requestId?: string }).requestId) ??
+          resolvedRequestId;
         defaultRuntime.log(
-          `${theme.success("Approved")} ${theme.command(deviceId ?? "ok")} ${theme.muted(`(${resolvedRequestId})`)}`,
+          `${theme.success("Approved")} ${theme.command(deviceId ?? "ok")} ${theme.muted(`(${approvedRequestId})`)}`,
         );
       }),
   );

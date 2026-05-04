@@ -152,7 +152,7 @@ When you set `--url`, the CLI does not fall back to config or environment creden
   rotate or revoke a token that currently carries `operator.admin` or
   `operator.write`.
 - `devices clear` is intentionally gated by `--yes`.
-- If pairing scope is unavailable on local loopback (and no explicit `--url` is passed), list/approve can use a local pairing fallback.
+- If pairing scope is unavailable on local loopback (and no explicit `--url` is passed), list/approve can use a local pairing fallback. If the direct approval attempt supersedes the same local request, the fallback resolves and approves the current equivalent request instead of failing on the stale ID.
 - `devices approve` requires an explicit request ID before minting tokens; omitting `requestId` or passing `--latest` only previews the newest pending request.
 
 ## Token drift recovery checklist

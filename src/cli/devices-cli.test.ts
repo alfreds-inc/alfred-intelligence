@@ -581,6 +581,93 @@ describe("devices cli local fallback", () => {
     expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("Approved"));
   });
 
+  it("approves the current equivalent local request when direct approve supersedes the original id", async () => {
+    callGateway.mockResolvedValueOnce({
+      pending: [
+        pendingDevice({
+          requestId: "req-old",
+          publicKey: "pk",
+          isRepair: true,
+          scopes: ["operator.admin"],
+        }),
+      ],
+      paired: [
+        pairedDevice({
+          publicKey: "pk",
+          tokens: [{ role: "operator", scopes: ["operator.read"] }],
+        }),
+      ],
+    });
+    rejectGatewayForLocalFallback(
+      "scope upgrade pending approval (requestId: req-new)\nGatewayTransportError: gateway closed (1008): pairing required: device is asking for more scopes than currently approved",
+    );
+    listDevicePairing.mockResolvedValueOnce({
+      pending: [
+        pendingDevice({
+          requestId: "req-new",
+          publicKey: "pk",
+          isRepair: true,
+          scopes: ["operator.admin", "operator.pairing"],
+          ts: 2,
+        }),
+      ],
+      paired: [],
+    });
+    approveDevicePairing.mockResolvedValueOnce({
+      status: "approved",
+      requestId: "req-new",
+      device: {
+        deviceId: "device-1",
+        publicKey: "pk",
+        approvedAtMs: 1,
+        createdAtMs: 1,
+      },
+    });
+
+    await runDevicesApprove(["req-old"]);
+
+    expect(approveDevicePairing).toHaveBeenCalledWith("req-new", {
+      callerScopes: ["operator.admin"],
+    });
+    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("(req-new)"));
+  });
+
+  it("does not rewrite local fallback approval to a different public key", async () => {
+    callGateway.mockResolvedValueOnce({
+      pending: [
+        pendingDevice({
+          requestId: "req-old",
+          publicKey: "pk-old",
+          isRepair: true,
+          scopes: ["operator.admin"],
+        }),
+      ],
+      paired: [],
+    });
+    rejectGatewayForLocalFallback(
+      "scope upgrade pending approval (requestId: req-new)\nGatewayTransportError: gateway closed (1008): pairing required",
+    );
+    listDevicePairing.mockResolvedValueOnce({
+      pending: [
+        pendingDevice({
+          requestId: "req-new",
+          publicKey: "pk-new",
+          isRepair: true,
+          scopes: ["operator.admin"],
+          ts: 2,
+        }),
+      ],
+      paired: [],
+    });
+
+    await runDevicesApprove(["req-old"]);
+
+    expect(approveDevicePairing).toHaveBeenCalledWith("req-old", {
+      callerScopes: ["operator.admin"],
+    });
+    expect(runtime.error).toHaveBeenCalledWith("unknown requestId");
+  });
+
   it("falls back to local pairing list when gateway returns a scope upgrade message on loopback", async () => {
     mockLocalPairingFallback("scope upgrade pending approval (requestId: req-123)");
 
