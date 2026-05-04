@@ -283,6 +283,28 @@ describe("pairing cli", () => {
     });
   });
 
+  it("uses the approved request account when notifying the requester", async () => {
+    approveChannelPairingCode.mockResolvedValueOnce({
+      id: "123",
+      entry: {
+        id: "123",
+        code: "ABCDEFGH",
+        createdAt: "2026-01-08T00:00:00Z",
+        lastSeenAt: "2026-01-08T00:00:00Z",
+        meta: { accountId: "ops" },
+      },
+    });
+
+    await runPairing(["pairing", "approve", "--channel", "telegram", "ABCDEFGH", "--notify"]);
+
+    expect(notifyPairingApproved).toHaveBeenCalledWith({
+      channelId: "telegram",
+      id: "123",
+      accountId: "ops",
+      cfg: {},
+    });
+  });
+
   it("defaults approve to the sole available channel when only code is provided", async () => {
     listPairingChannels.mockReturnValueOnce(["slack"]);
     mockApprovedPairing();
