@@ -57,6 +57,9 @@ v2026.6.11):
    `src/skills/loading/workspace.ts`.
 7. `scripts/openclaw-npm-release-check.ts` + matching test — identity
    assertions widened to accept both upstream and fork names/bins/repo URLs.
+   `scripts/package-changelog.mjs` — version patterns accept the `-alfred.N`
+   release suffix, resolving to the upstream base version's changelog section
+   (without this, prepack aborts on fork release versions).
 8. CI: adds `alfred-rebase-and-publish.yml`; trims providers/secrets in
    `openclaw-scheduled-live-checks.yml`; deletes `docker-release.yml`; skips
    the docs-translate dispatch for Alfred releases.
