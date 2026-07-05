@@ -265,7 +265,9 @@ jobs:
           # package.json excludes. npm/pnpm still walks excluded trees while
           # applying packlist filters, and those extension runtime deps dominate
           # the runner's file count.
+          echo "prepack starting at $(date -u +%T)"
           pnpm run prepack
+          echo "prepack done at $(date -u +%T)"
           if [ -d dist/extensions ]; then
             find dist/extensions -path '*/node_modules' -type d -prune -exec rm -rf {} +
             find dist/extensions -path '*/.openclaw-runtime-deps-*' -type d -prune -exec rm -rf {} +
@@ -273,11 +275,22 @@ jobs:
           fi
           du -sh dist dist/extensions 2>/dev/null || true
 
+          # Drop every installed dependency tree before packing. npm pack walks
+          # the whole directory tree while applying packlist filters, and the
+          # installed workspace graph (150+ node_modules trees) makes that walk
+          # dominate wall-clock on 2-core runners. Nothing after the prepack
+          # build needs installed deps: npm pack runs with --ignore-scripts and
+          # the remaining steps only use gh/git.
+          echo "node_modules prune starting at $(date -u +%T)"
+          find . -name node_modules -type d -prune -exec rm -rf {} +
+          echo "node_modules prune done at $(date -u +%T)"
+
           # Pack without rerunning prepack, and write the fixed asset name
           # Alfred's installer relies on. Use npm for the final tarball: pnpm
           # can still spend minutes calculating the packlist from the installed
           # workspace graph after the build is complete.
           # https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          echo "npm pack starting at $(date -u +%T)"
           pack_log="$(mktemp)"
           pack_dir="$(mktemp -d)"
           if ! npm pack --ignore-scripts --pack-destination "$pack_dir" >"$pack_log" 2>&1; then
