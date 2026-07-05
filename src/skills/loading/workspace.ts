@@ -1318,10 +1318,10 @@ function buildSkillsLimitNote(params: {
   total: number;
 }): string {
   if (params.truncated) {
-    return `⚠️ Skills truncated: included ${params.included} of ${params.total}${params.compact ? " (compact format, descriptions omitted)" : ""}. Run \`openclaw skills check\` to audit.`;
+    return `⚠️ Skills truncated: included ${params.included} of ${params.total}${params.compact ? " (compact format, descriptions omitted)" : ""}. Run \`alfred-intelligence skills check\` to audit.`;
   }
   if (params.compact) {
-    return `⚠️ Skills catalog using compact format (descriptions omitted). Run \`openclaw skills check\` to audit.`;
+    return `⚠️ Skills catalog using compact format (descriptions omitted). Run \`alfred-intelligence skills check\` to audit.`;
   }
   return "";
 }
