@@ -1,10 +1,13 @@
 // CLI-name helpers keep generated examples aligned with the binary the user invoked.
 import path from "node:path";
 
-const DEFAULT_CLI_NAME = "openclaw";
+export const DEFAULT_CLI_NAME = "alfred-intelligence";
 
-const KNOWN_CLI_NAMES = new Set([DEFAULT_CLI_NAME]);
-const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(openclaw)\b/;
+// Legacy name retained alongside the default so users who installed via the
+// original openclaw package keep working, and so formatCliCommand can rewrite
+// literal `openclaw …` strings that still appear in upstream source.
+const KNOWN_CLI_NAMES = new Set([DEFAULT_CLI_NAME, "openclaw"]);
+const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(?:openclaw|alfred-intelligence)\b/;
 
 /** Resolve the displayed CLI binary name from argv, falling back to `openclaw`. */
 export function resolveCliName(argv: string[] = process.argv): string {
