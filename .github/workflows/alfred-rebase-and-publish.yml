@@ -1,0 +1,350 @@
+# Weekly rebase of the Alfred branding patch onto upstream openclaw, then
+# publish a pre-built tarball as a GitHub Release asset.
+#
+# Flow:
+#   1. Fast-forward our `upstream-main` branch to openclaw/openclaw:main.
+#   2. Resolve the latest upstream stable tag (`vYYYY.M.D` with no prerelease
+#      suffix) and replay only the Alfred fork commits onto it. Upstream stable
+#      tags are not always linear with each other, so replaying from the
+#      previous fork base avoids dragging old upstream release commits forward.
+#      On conflict, open an issue and stop — humans resolve.
+#   3. `pnpm install` + `pnpm check` (typecheck + lint + static checks). Test
+#      suite is intentionally skipped — see "Run check suite" note.
+#   4. Bump the fork version to `<upstream-stable>-alfred.<run-number>`.
+#   5. Push the rebased branch, then create a release-only bump commit and tag.
+#      The bump commit is intentionally left on the tag only so the next rebase
+#      does not have to replay stale `release:` commits.
+#   6. `pnpm pack` to build the tarball, rename it to the fixed filename
+#      `alfred-intelligence.tgz`, and attach as an asset on a GitHub Release.
+#      Release is published as the latest normal release so
+#      `releases/latest/download/…` immediately resolves to the tarball the
+#      installer consumes.
+#
+# No npm registry, no NPM_TOKEN. Release assets ride on the default
+# GITHUB_TOKEN.
+
+name: Rebase on upstream + publish GitHub Release
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      skip_release:
+        description: "Rebase and pack only; skip creating a GitHub Release."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: alfred-rebase-publish
+  cancel-in-progress: false
+
+jobs:
+  rebase-and-publish:
+    runs-on: ubuntu-latest
+    # The prepack build (tsdown core + all bundled extensions) runs on a
+    # 2-core hosted runner and takes ~1h on current upstream; leave headroom.
+    timeout-minutes: 150
+    steps:
+      - name: Checkout alfred-brand (full history)
+        uses: actions/checkout@v6
+        with:
+          ref: alfred-brand
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure bot identity
+        run: |
+          git config user.name "alfred-intelligence-bot"
+          git config user.email "bot@alfreds-inc.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/openclaw/openclaw.git || true
+          git fetch upstream main --tags
+
+      - name: Fast-forward upstream-main mirror (tracking only, best-effort)
+        run: |
+          # upstream-main is an informational mirror of openclaw/openclaw:main
+          # visible on our fork. It's NOT used by the rebase or publish steps.
+          # The default GITHUB_TOKEN lacks the `workflows` permission, so pushes
+          # that touch upstream's `.github/workflows/*` fail. Swallow those so
+          # a workflow-file churn upstream doesn't block our release pipeline.
+          git checkout -B upstream-main upstream/main
+          if ! git push origin upstream-main --force-with-lease; then
+            echo "::warning::Could not fast-forward upstream-main (likely workflow-file churn upstream). Continuing; upstream/main ref is still up to date locally and drives the rebase."
+          fi
+          git checkout alfred-brand
+
+      - name: Resolve latest upstream stable tag
+        id: stable
+        run: |
+          # Pick the latest `vYYYY.M.D` tag with no suffix (pure upstream
+          # calver stable). We anchor the pattern so our own fork tags like
+          # `v2026.4.15-alfred.4` don't win the `sort -V | tail -1` race —
+          # GNU sort treats `-alfred.4` as extending the base version and
+          # ranks it AFTER the bare tag, so a loose filter would point the
+          # rebase at our previous release instead of upstream.
+          stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+          if [ -z "$stable_tag" ]; then
+            echo "::error::Could not find a stable upstream tag (v<YYYY>.<M>.<D>)."
+            exit 1
+          fi
+          stable_sha="$(git rev-parse "$stable_tag")"
+          stable_version="${stable_tag#v}"
+          echo "tag=$stable_tag" >> "$GITHUB_OUTPUT"
+          echo "sha=$stable_sha" >> "$GITHUB_OUTPUT"
+          echo "version=$stable_version" >> "$GITHUB_OUTPUT"
+          echo "Rebase target: $stable_tag ($stable_sha)"
+
+      - name: Resolve current fork base tag
+        id: base
+        run: |
+          current_version="$(
+            node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));const m=/^([0-9]+\\.[0-9]+\\.[0-9]+)(?:-alfred\\.[0-9]+)?$/.exec(p.version);if(!m){process.exit(1)}process.stdout.write(m[1]);"
+          )"
+          current_tag="v${current_version}"
+          if git rev-parse -q --verify "${current_tag}^{commit}" >/dev/null && git merge-base --is-ancestor "$current_tag" HEAD; then
+            echo "tag=$current_tag" >> "$GITHUB_OUTPUT"
+            echo "version=$current_version" >> "$GITHUB_OUTPUT"
+            echo "Current fork base: $current_tag"
+          else
+            echo "::warning::Could not verify current fork base tag ${current_tag}; falling back to a plain rebase."
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "version=$current_version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rebase alfred-brand onto upstream stable tag
+        id: rebase
+        run: |
+          git checkout alfred-brand
+          target="${{ steps.stable.outputs.tag }}"
+          current="${{ steps.base.outputs.tag }}"
+
+          if [ -n "$current" ] && [ "$current" != "$target" ]; then
+            echo "Replaying fork-local commits from ${current}..HEAD onto ${target}."
+            if ! (
+              set -e
+              mapfile -t fork_commits < <(git rev-list --reverse "${current}..HEAD")
+              git checkout -B alfred-brand-rebased "$target"
+              for commit in "${fork_commits[@]}"; do
+                subject="$(git log -1 --format=%s "$commit")"
+                if [[ "$subject" =~ ^release:\ [0-9]+\.[0-9]+\.[0-9]+-alfred\.[0-9]+$ ]]; then
+                  echo "::notice::Skipping previous release-only commit ${commit:0:12}: ${subject}"
+                  continue
+                fi
+                git cherry-pick --empty=drop "$commit"
+              done
+              git branch -f alfred-brand HEAD
+              git checkout alfred-brand
+            ); then
+              git cherry-pick --abort || true
+              git checkout alfred-brand || true
+              echo "conflict=true" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+          else
+            if ! git rebase "$target"; then
+              git rebase --abort || true
+              echo "conflict=true" >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+          fi
+          echo "conflict=false" >> "$GITHUB_OUTPUT"
+
+      - name: Open conflict issue if rebase failed
+        if: failure() && steps.rebase.outputs.conflict == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const tag = "${{ steps.stable.outputs.tag }}";
+            const sha = "${{ steps.stable.outputs.sha }}".slice(0, 12);
+            const title = `Rebase conflict against openclaw/openclaw@${tag}`;
+            const body = [
+              `The scheduled rebase of \`alfred-brand\` onto \`${tag}\` (\`${sha}\`) failed.`,
+              ``,
+              `Resolve locally:`,
+              "```",
+              `git fetch upstream --tags`,
+              `git checkout alfred-brand`,
+              `git rebase --onto ${tag} ${{ steps.base.outputs.tag || '<previous-upstream-base-tag>' }} alfred-brand`,
+              `# fix conflicts, re-stage, git rebase --continue`,
+              `git push --force-with-lease origin alfred-brand`,
+              "```",
+              ``,
+              `Re-run this workflow after the branch is pushed.`,
+            ].join("\n");
+            try {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["rebase-conflict", "automation"],
+              });
+            } catch (error) {
+              const status = error && typeof error === "object" && "status" in error ? error.status : "unknown";
+              const message = error instanceof Error ? error.message : String(error);
+              core.warning(`Could not open rebase conflict issue (status ${status}): ${message}`);
+            }
+
+      # Read pnpm version from package.json's `packageManager` field rather
+      # than pinning it here — pnpm/action-setup@v4 errors if the inputs
+      # don't match the pinned version exactly.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+
+      - name: Run check suite
+        id: check
+        # We keep the broad static/type gates from `pnpm check`, but avoid the
+        # repo-wide `pnpm lint` lane because upstream stable tags can ship
+        # unrelated oxlint failures in files the Alfred fork does not touch.
+        # Instead, lint the fork-local JS/TS diff against the chosen upstream
+        # rebase target. Runtime smoke still happens post-publish via
+        # `alfred telegram set`.
+        run: |
+          pnpm check:no-conflict-markers
+          pnpm tool-display:check
+          pnpm check:host-env-policy:swift
+          pnpm tsgo:all
+
+          fork_lint_files=()
+          while IFS= read -r file; do
+            fork_lint_files+=("$file")
+          done < <(
+            git diff --name-only "${{ steps.stable.outputs.tag }}"..HEAD -- '*.ts' '*.tsx' '*.js' '*.mjs'
+          )
+          if [ "${#fork_lint_files[@]}" -gt 0 ]; then
+            pnpm exec oxlint "${fork_lint_files[@]}"
+          else
+            echo "No fork-local JS/TS files changed relative to ${{ steps.stable.outputs.tag }}; skipping targeted oxlint."
+          fi
+
+          pnpm lint:webhook:no-low-level-body-read
+          pnpm lint:auth:no-pairing-store-group
+          pnpm lint:auth:pairing-account-scope
+          pnpm check:import-cycles
+          pnpm check:madge-import-cycles
+
+      - name: Push rebased branch
+        run: git push origin HEAD:alfred-brand --force-with-lease
+
+      - name: Bump fork version
+        id: bump
+        run: |
+          base="${{ steps.stable.outputs.version }}"
+          next="${base}-alfred.${GITHUB_RUN_NUMBER}"
+          node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));p.version='${next}';fs.writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n');"
+          git add package.json
+          git commit -m "release: ${next}" --no-verify
+          git tag -a "v${next}" -m "Alfred Intelligence ${next}"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "tag=v${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Push release tag
+        run: git push origin "${{ steps.bump.outputs.tag }}"
+
+      - name: Pack the npm tarball
+        id: pack
+        run: |
+          # Run prepack explicitly, then remove generated dependency trees that
+          # package.json excludes. npm/pnpm still walks excluded trees while
+          # applying packlist filters, and those extension runtime deps dominate
+          # the runner's file count.
+          pnpm run prepack
+          if [ -d dist/extensions ]; then
+            find dist/extensions -path '*/node_modules' -type d -prune -exec rm -rf {} +
+            find dist/extensions -path '*/.openclaw-runtime-deps-*' -type d -prune -exec rm -rf {} +
+            find dist/extensions -name '.openclaw-runtime-deps-stamp.json' -type f -delete
+          fi
+          du -sh dist dist/extensions 2>/dev/null || true
+
+          # Pack without rerunning prepack, and write the fixed asset name
+          # Alfred's installer relies on. Use npm for the final tarball: pnpm
+          # can still spend minutes calculating the packlist from the installed
+          # workspace graph after the build is complete.
+          # https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          pack_log="$(mktemp)"
+          pack_dir="$(mktemp -d)"
+          if ! npm pack --ignore-scripts --pack-destination "$pack_dir" >"$pack_log" 2>&1; then
+            cat "$pack_log"
+            exit 1
+          fi
+          sed -n '/^npm notice Tarball Details/,$p' "$pack_log"
+          built_tarball="$(find "$pack_dir" -maxdepth 1 -name '*.tgz' -type f | head -1 || true)"
+          if [ -z "$built_tarball" ]; then
+            echo "::error::npm pack produced no tarball."
+            exit 1
+          fi
+          mv "$built_tarball" alfred-intelligence.tgz
+          asset_size="$(stat -c '%s' alfred-intelligence.tgz 2>/dev/null || stat -f '%z' alfred-intelligence.tgz)"
+          echo "asset=alfred-intelligence.tgz" >> "$GITHUB_OUTPUT"
+          echo "bytes=$asset_size" >> "$GITHUB_OUTPUT"
+          echo "Tarball: alfred-intelligence.tgz ($asset_size bytes)"
+
+      - name: Resolve release gate
+        id: gate
+        run: |
+          if [ "${{ github.event.inputs.skip_release }}" = "true" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::skip_release input set; skipping GitHub Release creation."
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.gate.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.bump.outputs.tag }}"
+          version="${{ steps.bump.outputs.version }}"
+          upstream_tag="${{ steps.stable.outputs.tag }}"
+          notes=$(cat <<EOF
+          Alfred Intelligence \`${version}\`.
+
+          Rebased onto upstream \`${upstream_tag}\`. Branding patch applies cleanly.
+
+          Asset: \`alfred-intelligence.tgz\` (fixed name for installer consumption).
+          Consume via:
+
+          \`\`\`
+          npm install -g https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          \`\`\`
+
+          This release is published as the latest normal GitHub Release so
+          fresh installs using \`releases/latest/download/…\` consume this
+          tarball immediately.
+          EOF
+          )
+          gh release create "$tag" alfred-intelligence.tgz \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Alfred Intelligence ${version}" \
+            --notes "$notes" \
+            --latest
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Alfred rebase + release" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Upstream stable tag: \`${{ steps.stable.outputs.tag || '(not resolved)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Upstream sha: \`${{ steps.stable.outputs.sha || '(n/a)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Fork version: \`${{ steps.bump.outputs.version || '(not bumped)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tarball: \`${{ steps.pack.outputs.asset || '(not packed)' }}\` (${{ steps.pack.outputs.bytes || '—' }} bytes)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- GitHub Release: \`${{ steps.gate.outputs.release || 'false' }}\` (latest)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"

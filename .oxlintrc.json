@@ -30,6 +30,7 @@
     "eslint/no-shadow": "error",
     "eslint/no-implicit-coercion": "error",
     "eslint/no-var": "error",
+    "eslint/no-underscore-dangle": ["error", { "allow": ["__testing"] }],
     "eslint/no-useless-call": "error",
     "eslint/no-useless-computed-key": "error",
     "eslint/no-useless-concat": "error",
