@@ -10,7 +10,10 @@ export function extractPairingCode(text: string): string {
   return code ?? "";
 }
 
-/** Verifies the visible pairing reply contains the expected id and approve command. */
+/**
+ * Verifies the visible pairing reply contains the expected id and code, and
+ * carries no CLI approve hint (that command is an operator surface only).
+ */
 export function expectPairingReplyText(
   text: string,
   params: {
@@ -23,7 +26,7 @@ export function expectPairingReplyText(
   expect(text).toContain("Alfred Intelligence: access not configured.");
   expect(text).toContain(params.idLine);
   expect(text).toContain("Pairing code:");
-  expect(text).toContain(`\n\`\`\`\n${code}\n\`\`\`\n`);
-  expect(text).toContain(`pairing approve ${params.channel} ${code}`);
+  expect(text).toContain(`\n\`\`\`\n${code}\n\`\`\``);
+  expect(text).not.toContain("pairing approve");
   return code;
 }
