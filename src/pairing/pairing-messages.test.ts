@@ -1,22 +1,9 @@
-// Tests user-facing pairing messages and setup command copy.
+// Tests user-facing pairing messages.
 import { expectPairingReplyText } from "openclaw/plugin-sdk/channel-test-helpers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { captureEnv } from "../test-utils/env.js";
+import { describe, expect, it } from "vitest";
 import { buildPairingReply } from "./pairing-messages.js";
 
 describe("buildPairingReply", () => {
-  let envSnapshot: ReturnType<typeof captureEnv>;
-
-  beforeEach(() => {
-    envSnapshot = captureEnv(["OPENCLAW_CONTAINER_HINT", "OPENCLAW_PROFILE"]);
-    delete process.env.OPENCLAW_CONTAINER_HINT;
-    process.env.OPENCLAW_PROFILE = "isolated";
-  });
-
-  afterEach(() => {
-    envSnapshot.restore();
-  });
-
   const pairingReplyCases = [
     {
       channel: "telegram",
@@ -50,23 +37,12 @@ describe("buildPairingReply", () => {
     },
   ] as const;
 
-  function expectPairingApproveCommand(text: string, testCase: (typeof pairingReplyCases)[number]) {
-    const commandRe = new RegExp(
-      `(?:alfred-intelligence|openclaw) --profile isolated pairing approve ${testCase.channel} ${testCase.code}`,
-    );
-    expect(text).toMatch(commandRe);
-    expect(
-      text.match(new RegExp(`pairing approve ${testCase.channel} ${testCase.code}`, "g")),
-    ).toHaveLength(1);
-  }
-
-  function expectProfileAwarePairingReply(testCase: (typeof pairingReplyCases)[number]) {
+  it.each(pairingReplyCases)("formats pairing reply for $channel", (testCase) => {
     const text = buildPairingReply(testCase);
     expectPairingReplyText(text, testCase);
-    expectPairingApproveCommand(text, testCase);
-  }
-
-  it.each(pairingReplyCases)("formats pairing reply for $channel", (testCase) => {
-    expectProfileAwarePairingReply(testCase);
+    // The approve command is an operator surface (pairing CLI, channel-setup
+    // status); the user-facing reply must end at the code block.
+    expect(text).not.toContain("Ask the bot owner to approve with:");
+    expect(text.endsWith(`\`\`\`\n${testCase.code}\n\`\`\``)).toBe(true);
   });
 });

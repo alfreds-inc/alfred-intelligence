@@ -168,11 +168,10 @@ describe("agent components", () => {
     expect(defer).not.toHaveBeenCalled();
     expect(reply).toHaveBeenCalledTimes(1);
     const pairingText = firstReplyContent(reply);
-    const code = expectPairingReplyText(pairingText, {
+    expectPairingReplyText(pairingText, {
       channel: "discord",
       idLine: "Your Discord user id: 123456789",
     });
-    expect(pairingText).toContain(`openclaw pairing approve discord ${code}`);
     expect(peekSystemEvents(defaultDmSessionKey)).toStrictEqual([]);
     expect(readAllowFromStoreMock).toHaveBeenCalledWith("discord", "default");
   });

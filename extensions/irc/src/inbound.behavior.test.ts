@@ -132,11 +132,6 @@ describe("irc inbound behavior", () => {
         "```",
         "CODE",
         "```",
-        "",
-        "Ask the bot owner to approve with:",
-        "```",
-        "alfred-intelligence pairing approve irc CODE",
-        "```",
       ].join("\n"),
       undefined,
     );
