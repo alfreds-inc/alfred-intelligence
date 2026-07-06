@@ -287,8 +287,8 @@ function expectInboxPairingReplyText(
   expect(text).toContain("Alfred Intelligence: access not configured.");
   expect(text).toContain(params.idLine);
   expect(text).toContain("Pairing code:");
-  expect(text).toContain(`\n\`\`\`\n${resolvedCode}\n\`\`\`\n`);
-  expect(text).toContain(`pairing approve ${params.channel} ${resolvedCode}`);
+  expect(text).toContain(`\n\`\`\`\n${resolvedCode}\n\`\`\``);
+  expect(text).not.toContain("pairing approve");
   return resolvedCode;
 }
 
