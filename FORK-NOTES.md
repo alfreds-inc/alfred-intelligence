@@ -62,7 +62,19 @@ v2026.6.11):
    (without this, prepack aborts on fork release versions).
 8. CI: adds `alfred-rebase-and-publish.yml`; trims providers/secrets in
    `openclaw-scheduled-live-checks.yml`; deletes `docker-release.yml`; skips
-   the docs-translate dispatch for Alfred releases.
+   the docs-translate dispatch for Alfred releases; gates the
+   `installer_smoke` job in `install-smoke.yml` to the upstream repository.
+
+   That last one is a **noise fix, not a bug fix**. The lane packs its
+   baseline from npm (`${OPENCLAW_INSTALL_PACKAGE:-openclaw}@<version>`), but
+   the fork ships from GitHub Releases and its scoped name is never published
+   to npm, so the baseline silently falls back to upstream `openclaw` and the
+   update-swap dies on `<stage>/lib/node_modules/openclaw`. No real install
+   does that cross-package migration — production self-update derives the
+   install spec from the installed package's own name, so fork installs update
+   fork -> fork. Drop this gate once the swap reads the staged package's real
+   name instead of assuming it equals the installed one (worth proposing
+   upstream: it also unblocks a genuine openclaw -> fork migration).
 
 No runtime logic, API, or data-shape changes beyond the CLI-name handling
 described above.
@@ -129,12 +141,18 @@ URL. This is a one-time UI toggle; the REST API doesn't currently expose it.
 
 ## When a rebase conflicts
 
-⚠️ **Repo issues are currently disabled**, so the workflow's
-"open a `rebase-conflict` issue" step downgrades to a log warning — the only
-failure signal is the workflow-failure email. This is how the weekly rebase
-sat broken for two months unnoticed. Either enable issues or check
-[workflow runs](https://github.com/alfreds-inc/alfred-intelligence/actions/workflows/alfred-rebase-and-publish.yml)
-when a Monday email arrives.
+~~Repo issues are currently disabled, so the conflict-issue step downgrades to
+a log warning~~ — **no longer true (corrected 2026-07-25)**. Issues are
+enabled and the step works: the 2026-07-20 conflict against `v2026.7.1` duly
+opened one, with the resolution commands in the body.
+
+The alert firing is not the same as the alert being read. That issue sat
+untouched for five days while the fork drifted six weeks behind upstream,
+because `installer_smoke` had been failing every single day and had trained
+everyone to ignore this repo's mail. That is why the lane is now gated to
+upstream (item 8 above): a permanently red check does not merely fail to
+inform, it conceals the checks that do. Keep this repo's failure signals
+few and true.
 
 Resolve locally:
 

@@ -404,7 +404,21 @@ jobs:
 
   installer_smoke:
     needs: [preflight, root_dockerfile_image]
-    if: needs.preflight.outputs.run_full_install_smoke == 'true'
+    # Upstream-only lane. It packs its baseline from the npm registry
+    # (`${OPENCLAW_INSTALL_PACKAGE:-openclaw}@<version>`), but the fork ships
+    # from GitHub Releases and `@alfreds-inc/alfred-intelligence` is never
+    # published to npm — so on this repo the baseline falls back to upstream
+    # `openclaw` and the update-swap then fails with ENOENT on
+    # `<stage>/lib/node_modules/openclaw`. That is a cross-package migration no
+    # real install performs: production self-update derives its install spec
+    # from the installed package's own name, so fork installs update
+    # fork -> fork and the swap matches. Leaving the lane red every day trained
+    # us to ignore this workflow, which is how a genuine rebase-conflict alert
+    # sat unread for five days. Re-enable once the swap reads the staged
+    # package's real name instead of assuming it equals the installed one.
+    if: >-
+      needs.preflight.outputs.run_full_install_smoke == 'true'
+      && github.repository == 'openclaw/openclaw'
     runs-on: ubuntu-24.04
     env:
       DOCKER_BUILD_SUMMARY: "false"
