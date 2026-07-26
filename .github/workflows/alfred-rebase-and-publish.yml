@@ -290,6 +290,60 @@ jobs:
           # can still spend minutes calculating the packlist from the installed
           # workspace graph after the build is complete.
           # https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          # Resolve pnpm's `workspace:` protocol before packing. `pnpm pack`
+          # rewrites those specifiers to concrete versions on the way out; we
+          # pack with npm (see above) for speed, and npm copies them verbatim.
+          # That was harmless until upstream v2026.7.1 added
+          # `"@openclaw/ai": "workspace:*"` to the root dependencies: the
+          # published package.json then carried a protocol npm cannot resolve,
+          # and every `npm install -g <tarball>` died with
+          # EUNSUPPORTEDPROTOCOL — v2026.7.1-alfred.39 shipped uninstallable.
+          # Versions come from the workspace packages themselves, which is
+          # exactly the substitution pnpm would have made.
+          node -e '
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const roots = ["packages", "extensions", "examples", "ui", "."];
+            const versions = new Map();
+            for (const root of roots) {
+              const dirs = root === "." || root === "ui"
+                ? [root]
+                : (fs.existsSync(root) ? fs.readdirSync(root).map((d) => path.join(root, d)) : []);
+              for (const dir of dirs) {
+                const manifest = path.join(dir, "package.json");
+                if (!fs.existsSync(manifest)) continue;
+                try {
+                  const pkg = JSON.parse(fs.readFileSync(manifest, "utf8"));
+                  if (pkg.name && pkg.version && !versions.has(pkg.name)) {
+                    versions.set(pkg.name, pkg.version);
+                  }
+                } catch {}
+              }
+            }
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const rewritten = [];
+            for (const section of ["dependencies", "optionalDependencies", "peerDependencies"]) {
+              const deps = pkg[section];
+              if (!deps) continue;
+              for (const [name, spec] of Object.entries(deps)) {
+                if (typeof spec !== "string" || !spec.startsWith("workspace:")) continue;
+                const version = versions.get(name);
+                if (!version) {
+                  console.error(`::error::${section}.${name} is "${spec}" but no workspace package provides it; the tarball would be uninstallable.`);
+                  process.exit(1);
+                }
+                deps[name] = version;
+                rewritten.push(`${section}.${name}: ${spec} -> ${version}`);
+              }
+            }
+            if (rewritten.length) {
+              fs.writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
+              console.log(`Resolved workspace protocols:\n  ${rewritten.join("\n  ")}`);
+            } else {
+              console.log("No workspace: specifiers to resolve.");
+            }
+          '
+
           echo "npm pack starting at $(date -u +%T)"
           pack_log="$(mktemp)"
           pack_dir="$(mktemp -d)"
