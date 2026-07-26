@@ -139,6 +139,47 @@ Versions follow `<upstream-stable>-alfred.<run-number>`.
 the same tag, which defeats the purpose of pinning the installer at a fixed
 URL. This is a one-time UI toggle; the REST API doesn't currently expose it.
 
+## Scheduled workflows: what runs here, and what we turned off
+
+The fork inherits upstream's entire CI fleet (~60 workflows). Most exist to
+develop and release OpenClaw itself and cannot pass here — we ship from GitHub
+Releases rather than npm, we carry a different CLI name, and we hold none of
+upstream's provider secrets. Over 100 recent runs, exactly two scheduled
+workflows were green.
+
+Disabled **via the Actions API** (`gh workflow disable <id>`), deliberately not
+by editing their YAML: an API-level disable adds zero fork surface, so the
+weekly rebase has nothing extra to replay. The trade-off is that the state
+lives in repo settings rather than in git — hence this list. Re-enable any of
+them with `gh workflow enable <id>`.
+
+| Workflow                                 | Why it is off                                                                                                                                                             |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openclaw-scheduled-live-checks.yml`     | Live suites need Z.AI/OpenCode provider secrets the fork trims out, and its repo-E2E lane trips the documented CLI-name test failures. Structurally red, not transiently. |
+| `qa-live-transports-convex.yml` (QA-Lab) | Never completed a run — queued for hours, then cancelled.                                                                                                                 |
+| `openclaw-performance.yml`               | Same: queued, never completed.                                                                                                                                            |
+| `stale.yml`                              | Same, and issue/PR triage is upstream's concern, not the fork's.                                                                                                          |
+| `control-ui-locale-refresh.yml`          | Same.                                                                                                                                                                     |
+| `codeql-android-critical-security.yml`   | Same (observed queued 22h+). The fork ships no Android app.                                                                                                               |
+| `codeql-macos-critical-security.yml`     | Was already disabled before this cleanup.                                                                                                                                 |
+
+Kept: `alfred-rebase-and-publish.yml` (the one that matters), `codeql.yml` and
+`codeql-critical-quality.yml` (both consistently green and genuinely useful),
+and `install-smoke.yml`, whose single broken lane is gated to upstream in
+item 8 above rather than the whole workflow being switched off.
+
+Beyond the noise, those never-completing workflows were **consuming runner
+capacity**. Several sat queued for 22-24 hours at a time, and the 2026-07-25
+release run hung for 2h22m in `Pack the npm tarball` before hitting the job
+timeout — an identical re-run finished in 15 minutes once the queue cleared.
+Turning them off is as much about making releases finish as about quieting the
+inbox.
+
+The rule to hold onto: **keep this repo's failure signals few and true.** A
+permanently red check does not merely fail to inform, it conceals the checks
+that do — which is exactly how a rebase-conflict issue sat unread for five days
+while the fork drifted six weeks behind upstream.
+
 ## When a rebase conflicts
 
 ~~Repo issues are currently disabled, so the conflict-issue step downgrades to
