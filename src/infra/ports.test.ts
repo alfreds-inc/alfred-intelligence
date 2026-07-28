@@ -112,7 +112,7 @@ describe("ports helpers", () => {
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
-  it("prints an OpenClaw-specific hint when port details look like another OpenClaw instance", async () => {
+  it("prints a Zolven Intelligence hint when port details identify the runtime", async () => {
     const runtime = {
       error: vi.fn(),
       log: vi.fn(),
@@ -127,7 +127,9 @@ describe("ports helpers", () => {
     ).catch(() => {});
 
     const messages = runtime.error.mock.calls.map((call) => stripAnsi(String(call[0] ?? "")));
-    expect(messages.join("\n")).toContain("another OpenClaw instance is already running");
+    expect(messages.join("\n")).toContain(
+      "another Zolven Intelligence instance is already running",
+    );
   });
 });
 

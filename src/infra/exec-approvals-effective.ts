@@ -98,7 +98,7 @@ function formatRequestedSource(params: {
   defaultValue: ExecSecurity | ExecAsk;
 }): string {
   return params.sourcePath === "__default__"
-    ? `Alfred default (${params.defaultValue})`
+    ? `Zolven Intelligence default (${params.defaultValue})`
     : `${params.sourcePath}.${params.field}`;
 }
 
@@ -268,7 +268,7 @@ function formatHostFieldSource(params: {
     return `${params.hostPath} ${params.sourceSuffix}`;
   }
   if (params.field === "askFallback") {
-    return `Alfred default (${DEFAULT_EXEC_APPROVAL_ASK_FALLBACK})`;
+    return `Zolven Intelligence default (${DEFAULT_EXEC_APPROVAL_ASK_FALLBACK})`;
   }
   return "inherits requested tool policy";
 }
@@ -370,7 +370,7 @@ export function resolveExecPolicyScopeSnapshot(params: {
       requested: requestedHost.value,
       requestedSource:
         requestedHost.sourcePath === "__default__"
-          ? "Alfred default (auto)"
+          ? "Zolven Intelligence default (auto)"
           : `${requestedHost.sourcePath === "scope" ? params.configPath : requestedHost.sourcePath}.host`,
     },
     mode: {

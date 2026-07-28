@@ -48,6 +48,11 @@ describe("package-changelog", () => {
       "2026.5.28",
       "Unreleased",
     ]);
+    expect(resolvePackageChangelogVersions("2026.5.28-zolven.1")).toEqual([
+      "2026.5.28-zolven.1",
+      "2026.5.28",
+      "Unreleased",
+    ]);
     expect(resolvePackageChangelogVersions("2026.5.29", { allowUnreleased: true })).toEqual([
       "2026.5.29",
       "Unreleased",

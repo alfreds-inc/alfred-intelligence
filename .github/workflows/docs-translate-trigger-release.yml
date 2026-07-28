@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   dispatch-translate:
-    if: ${{ !contains(github.event.release.tag_name, '-alfred.') }}
+    if: ${{ !contains(github.event.release.tag_name, '-zolven.') }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger translation coordinator in publish repo

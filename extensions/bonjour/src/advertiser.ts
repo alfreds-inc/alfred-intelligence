@@ -224,7 +224,9 @@ function truncateToDnsLabel(name: string, fallback = "OpenClaw"): string {
 
 function safeServiceName(name: string) {
   const trimmed = name.trim();
-  return trimmed.length > 0 ? truncateToDnsLabel(trimmed, "Alfred") : "Alfred";
+  return trimmed.length > 0
+    ? truncateToDnsLabel(trimmed, "Zolven Intelligence")
+    : "Zolven Intelligence";
 }
 
 function prettifyInstanceName(name: string) {
@@ -441,7 +443,7 @@ export async function startGatewayBonjourAdvertiser(
     const instanceName =
       typeof opts.instanceName === "string" && opts.instanceName.trim()
         ? opts.instanceName.trim()
-        : `${hostname} (Alfred)`;
+        : `${hostname} (Zolven Intelligence)`;
     const displayName = prettifyInstanceName(instanceName);
 
     const txtBase: Record<string, string> = {

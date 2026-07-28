@@ -162,6 +162,16 @@ describe("control UI assets helpers (fs-mocked)", () => {
     );
   });
 
+  it("falls back to the Zolven Intelligence package name", async () => {
+    const root = abs("fixtures/zolven-fallback");
+    setFile(path.join(root, "package.json"), JSON.stringify({ name: "@zolven/intelligence" }));
+    setFile(path.join(root, "dist", "control-ui", "index.html"), "<html></html>\n");
+
+    await expect(resolveControlUiDistIndexPath(path.join(root, "openclaw.mjs"))).resolves.toBe(
+      path.join(root, "dist", "control-ui", "index.html"),
+    );
+  });
+
   it("returns null when fallback package name does not match", async () => {
     const root = abs("fixtures/not-openclaw");
     setFile(path.join(root, "package.json"), JSON.stringify({ name: "malicious-pkg" }));

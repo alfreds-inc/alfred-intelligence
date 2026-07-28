@@ -1,15 +1,15 @@
 // CLI-name helpers keep generated examples aligned with the binary the user invoked.
 import path from "node:path";
 
-export const DEFAULT_CLI_NAME = "alfred-intelligence";
+export const DEFAULT_CLI_NAME = "zolven-intelligence";
 
 // Legacy name retained alongside the default so users who installed via the
 // original openclaw package keep working, and so formatCliCommand can rewrite
 // literal `openclaw …` strings that still appear in upstream source.
 const KNOWN_CLI_NAMES = new Set([DEFAULT_CLI_NAME, "openclaw"]);
-const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(?:openclaw|alfred-intelligence)\b/;
+const CLI_PREFIX_RE = /^(?:((?:pnpm|npm|bunx|npx)\s+))?(?:openclaw|zolven-intelligence)\b/;
 
-/** Resolve the displayed CLI binary name from argv, falling back to `openclaw`. */
+/** Resolve the displayed CLI binary name from argv, falling back to Zolven Intelligence. */
 export function resolveCliName(argv: string[] = process.argv): string {
   const argv1 = argv[1];
   if (!argv1) {
@@ -22,7 +22,7 @@ export function resolveCliName(argv: string[] = process.argv): string {
   return DEFAULT_CLI_NAME;
 }
 
-/** Replace a leading `openclaw` command prefix with the active CLI name. */
+/** Replace a recognized command prefix with the active CLI name. */
 export function replaceCliName(command: string, cliName = resolveCliName()): string {
   if (!command.trim()) {
     return command;

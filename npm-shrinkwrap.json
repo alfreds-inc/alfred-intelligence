@@ -1,11 +1,11 @@
 {
-  "name": "openclaw",
+  "name": "@zolven/intelligence",
   "version": "2026.7.1",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
-      "name": "openclaw",
+      "name": "@zolven/intelligence",
       "version": "2026.7.1",
       "hasInstallScript": true,
       "license": "MIT",
@@ -67,7 +67,8 @@
         "zod": "4.4.3"
       },
       "bin": {
-        "openclaw": "openclaw.mjs"
+        "openclaw": "openclaw.mjs",
+        "zolven-intelligence": "openclaw.mjs"
       },
       "engines": {
         "node": ">=22.22.3 <23 || >=24.15.0 <25 || >=25.9.0"

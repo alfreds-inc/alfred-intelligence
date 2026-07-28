@@ -817,14 +817,14 @@ describe("collectReleasePackageMetadataErrors", () => {
     ).toStrictEqual([]);
   });
 
-  it("accepts the alfred-intelligence fork identity as valid", () => {
+  it("accepts the Zolven Intelligence fork identity as valid", () => {
     expect(
       collectReleasePackageMetadataErrors({
-        name: "@alfreds-inc/alfred-intelligence",
-        description: "Multi-channel AI gateway with extensible messaging integrations",
+        name: "@zolven/intelligence",
+        description: "Zolven Intelligence, a branded OpenClaw runtime for Zolven",
         license: "MIT",
-        repository: { url: "git+https://github.com/alfreds-inc/alfred-intelligence.git" },
-        bin: { "alfred-intelligence": "openclaw.mjs", openclaw: "openclaw.mjs" },
+        repository: { url: "git+https://github.com/Zolven/zolven-intelligence.git" },
+        bin: { "zolven-intelligence": "openclaw.mjs", openclaw: "openclaw.mjs" },
       }),
     ).toEqual([]);
   });

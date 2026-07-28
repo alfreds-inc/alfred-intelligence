@@ -31,8 +31,9 @@ describe("isGatewayArgv", () => {
     expect(isGatewayArgv(["tsx", "/srv/openclaw/src/index.ts", "gateway"])).toBe(true);
   });
 
-  it("matches the openclaw executable but gates the gateway binary behind the opt-in flag", () => {
+  it("matches product executables but gates the gateway binary behind the opt-in flag", () => {
     expect(isGatewayArgv(["C:\\bin\\openclaw.cmd", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["/usr/local/bin/zolven-intelligence", "gateway"])).toBe(true);
     expect(isGatewayArgv(["/usr/local/bin/openclaw-gateway", "gateway"])).toBe(false);
     expect(isGatewayArgv(["openclaw-gateway"])).toBe(false);
     expect(

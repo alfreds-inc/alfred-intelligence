@@ -33,8 +33,8 @@ export function isGatewayArgv(args: string[], opts?: { allowGatewayBinary?: bool
   return (
     exe.endsWith("/openclaw") ||
     exe === "openclaw" ||
-    exe.endsWith("/alfred-intelligence") ||
-    exe === "alfred-intelligence" ||
+    exe.endsWith("/zolven-intelligence") ||
+    exe === "zolven-intelligence" ||
     (opts?.allowGatewayBinary === true && isGatewayBinary)
   );
 }

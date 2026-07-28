@@ -1,21 +1,21 @@
-# Weekly rebase of the Alfred branding patch onto upstream openclaw, then
+# Weekly rebase of the Zolven branding patch onto upstream OpenClaw, then
 # publish a pre-built tarball as a GitHub Release asset.
 #
 # Flow:
 #   1. Fast-forward our `upstream-main` branch to openclaw/openclaw:main.
 #   2. Resolve the latest upstream stable tag (`vYYYY.M.D` with no prerelease
-#      suffix) and replay only the Alfred fork commits onto it. Upstream stable
+#      suffix) and replay only the Zolven fork commits onto it. Upstream stable
 #      tags are not always linear with each other, so replaying from the
 #      previous fork base avoids dragging old upstream release commits forward.
 #      On conflict, open an issue and stop — humans resolve.
 #   3. `pnpm install` + `pnpm check` (typecheck + lint + static checks). Test
 #      suite is intentionally skipped — see "Run check suite" note.
-#   4. Bump the fork version to `<upstream-stable>-alfred.<run-number>`.
+#   4. Bump the fork version to `<upstream-stable>-zolven.<run-number>`.
 #   5. Push the rebased branch, then create a release-only bump commit and tag.
 #      The bump commit is intentionally left on the tag only so the next rebase
 #      does not have to replay stale `release:` commits.
 #   6. `pnpm pack` to build the tarball, rename it to the fixed filename
-#      `alfred-intelligence.tgz`, and attach as an asset on a GitHub Release.
+#      `zolven-intelligence.tgz`, and attach as an asset on a GitHub Release.
 #      Release is published as the latest normal release so
 #      `releases/latest/download/…` immediately resolves to the tarball the
 #      installer consumes.
@@ -39,28 +39,36 @@ permissions:
   contents: write
   issues: write
 
+env:
+  # Controlled cutover: merge the rebrand first, then rename the GitHub default
+  # branch to this value before enabling scheduled or manual execution.
+  FORK_BRANCH: zolven-brand
+
 concurrency:
-  group: alfred-rebase-publish
+  group: zolven-rebase-publish
   cancel-in-progress: false
 
 jobs:
   rebase-and-publish:
+    # GitHub schedules execute from the default branch. Keep the mutating job
+    # inert between merge and the GitHub-managed default-branch rename.
+    if: github.ref_name == 'zolven-brand'
     runs-on: ubuntu-latest
     # The prepack build (tsdown core + all bundled extensions) runs on a
     # 2-core hosted runner and takes ~1h on current upstream; leave headroom.
     timeout-minutes: 150
     steps:
-      - name: Checkout alfred-brand (full history)
-        uses: actions/checkout@v6
+      - name: Checkout fork branch (full history)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          ref: alfred-brand
+          ref: ${{ env.FORK_BRANCH }}
           fetch-depth: 0
           persist-credentials: true
 
       - name: Configure bot identity
         run: |
-          git config user.name "alfred-intelligence-bot"
-          git config user.email "bot@alfreds-inc.noreply.github.com"
+          git config user.name "zolven-intelligence-bot"
+          git config user.email "bot@zolven.ai"
 
       - name: Fetch upstream
         run: |
@@ -78,15 +86,15 @@ jobs:
           if ! git push origin upstream-main --force-with-lease; then
             echo "::warning::Could not fast-forward upstream-main (likely workflow-file churn upstream). Continuing; upstream/main ref is still up to date locally and drives the rebase."
           fi
-          git checkout alfred-brand
+          git checkout "$FORK_BRANCH"
 
       - name: Resolve latest upstream stable tag
         id: stable
         run: |
           # Pick the latest `vYYYY.M.D` tag with no suffix (pure upstream
-          # calver stable). We anchor the pattern so our own fork tags like
-          # `v2026.4.15-alfred.4` don't win the `sort -V | tail -1` race —
-          # GNU sort treats `-alfred.4` as extending the base version and
+          # calver stable). We anchor the pattern so our own suffixed fork tags
+          # don't win the `sort -V | tail -1` race — GNU sort treats a suffix
+          # as extending the base version and
           # ranks it AFTER the bare tag, so a loose filter would point the
           # rebase at our previous release instead of upstream.
           stable_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
@@ -105,7 +113,7 @@ jobs:
         id: base
         run: |
           current_version="$(
-            node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));const m=/^([0-9]+\\.[0-9]+\\.[0-9]+)(?:-alfred\\.[0-9]+)?$/.exec(p.version);if(!m){process.exit(1)}process.stdout.write(m[1]);"
+            node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));const m=/^([0-9]+\\.[0-9]+\\.[0-9]+)(?:-zolven\\.[0-9]+)?$/.exec(p.version);if(!m){process.exit(1)}process.stdout.write(m[1]);"
           )"
           current_tag="v${current_version}"
           if git rev-parse -q --verify "${current_tag}^{commit}" >/dev/null && git merge-base --is-ancestor "$current_tag" HEAD; then
@@ -118,10 +126,10 @@ jobs:
             echo "version=$current_version" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Rebase alfred-brand onto upstream stable tag
+      - name: Rebase fork branch onto upstream stable tag
         id: rebase
         run: |
-          git checkout alfred-brand
+          git checkout "$FORK_BRANCH"
           target="${{ steps.stable.outputs.tag }}"
           current="${{ steps.base.outputs.tag }}"
 
@@ -130,20 +138,20 @@ jobs:
             if ! (
               set -e
               mapfile -t fork_commits < <(git rev-list --reverse "${current}..HEAD")
-              git checkout -B alfred-brand-rebased "$target"
+              git checkout -B zolven-brand-rebased "$target"
               for commit in "${fork_commits[@]}"; do
                 subject="$(git log -1 --format=%s "$commit")"
-                if [[ "$subject" =~ ^release:\ [0-9]+\.[0-9]+\.[0-9]+-alfred\.[0-9]+$ ]]; then
+                if [[ "$subject" =~ ^release:\ [0-9]+\.[0-9]+\.[0-9]+-zolven\.[0-9]+$ ]]; then
                   echo "::notice::Skipping previous release-only commit ${commit:0:12}: ${subject}"
                   continue
                 fi
                 git cherry-pick --empty=drop "$commit"
               done
-              git branch -f alfred-brand HEAD
-              git checkout alfred-brand
+              git branch -f "$FORK_BRANCH" HEAD
+              git checkout "$FORK_BRANCH"
             ); then
               git cherry-pick --abort || true
-              git checkout alfred-brand || true
+              git checkout "$FORK_BRANCH" || true
               echo "conflict=true" >> "$GITHUB_OUTPUT"
               exit 1
             fi
@@ -158,22 +166,23 @@ jobs:
 
       - name: Open conflict issue if rebase failed
         if: failure() && steps.rebase.outputs.conflict == 'true'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const tag = "${{ steps.stable.outputs.tag }}";
             const sha = "${{ steps.stable.outputs.sha }}".slice(0, 12);
+            const forkBranch = process.env.FORK_BRANCH;
             const title = `Rebase conflict against openclaw/openclaw@${tag}`;
             const body = [
-              `The scheduled rebase of \`alfred-brand\` onto \`${tag}\` (\`${sha}\`) failed.`,
+              `The scheduled rebase of \`${forkBranch}\` onto \`${tag}\` (\`${sha}\`) failed.`,
               ``,
               `Resolve locally:`,
               "```",
               `git fetch upstream --tags`,
-              `git checkout alfred-brand`,
-              `git rebase --onto ${tag} ${{ steps.base.outputs.tag || '<previous-upstream-base-tag>' }} alfred-brand`,
+              `git checkout ${forkBranch}`,
+              `git rebase --onto ${tag} ${{ steps.base.outputs.tag || '<previous-upstream-base-tag>' }} ${forkBranch}`,
               `# fix conflicts, re-stage, git rebase --continue`,
-              `git push --force-with-lease origin alfred-brand`,
+              `git push --force-with-lease origin ${forkBranch}`,
               "```",
               ``,
               `Re-run this workflow after the branch is pushed.`,
@@ -196,9 +205,9 @@ jobs:
       # than pinning it here — pnpm/action-setup@v4 errors if the inputs
       # don't match the pinned version exactly.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: 22
           cache: pnpm
@@ -212,10 +221,10 @@ jobs:
         id: check
         # We keep the broad static/type gates from `pnpm check`, but avoid the
         # repo-wide `pnpm lint` lane because upstream stable tags can ship
-        # unrelated oxlint failures in files the Alfred fork does not touch.
+        # unrelated oxlint failures in files the Zolven fork does not touch.
         # Instead, lint the fork-local JS/TS diff against the chosen upstream
         # rebase target. Runtime smoke still happens post-publish via
-        # `alfred telegram set`.
+        # `zolven-intelligence telegram set`.
         run: |
           pnpm check:no-conflict-markers
           pnpm tool-display:check
@@ -241,17 +250,17 @@ jobs:
           pnpm check:madge-import-cycles
 
       - name: Push rebased branch
-        run: git push origin HEAD:alfred-brand --force-with-lease
+        run: git push origin "HEAD:${FORK_BRANCH}" --force-with-lease
 
       - name: Bump fork version
         id: bump
         run: |
           base="${{ steps.stable.outputs.version }}"
-          next="${base}-alfred.${GITHUB_RUN_NUMBER}"
+          next="${base}-zolven.${GITHUB_RUN_NUMBER}"
           node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));p.version='${next}';fs.writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n');"
           git add package.json
           git commit -m "release: ${next}" --no-verify
-          git tag -a "v${next}" -m "Alfred Intelligence ${next}"
+          git tag -a "v${next}" -m "Zolven Intelligence ${next}"
           echo "version=$next" >> "$GITHUB_OUTPUT"
           echo "tag=v${next}" >> "$GITHUB_OUTPUT"
 
@@ -286,10 +295,10 @@ jobs:
           echo "node_modules prune done at $(date -u +%T)"
 
           # Pack without rerunning prepack, and write the fixed asset name
-          # Alfred's installer relies on. Use npm for the final tarball: pnpm
+          # Zolven's installer relies on. Use npm for the final tarball: pnpm
           # can still spend minutes calculating the packlist from the installed
           # workspace graph after the build is complete.
-          # https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          # https://github.com/Zolven/zolven-intelligence/releases/latest/download/zolven-intelligence.tgz
           # Resolve pnpm's `workspace:` protocol before packing. `pnpm pack`
           # rewrites those specifiers to concrete versions on the way out; we
           # pack with npm (see above) for speed, and npm copies them verbatim.
@@ -297,7 +306,7 @@ jobs:
           # `"@openclaw/ai": "workspace:*"` to the root dependencies: the
           # published package.json then carried a protocol npm cannot resolve,
           # and every `npm install -g <tarball>` died with
-          # EUNSUPPORTEDPROTOCOL — v2026.7.1-alfred.39 shipped uninstallable.
+          # EUNSUPPORTEDPROTOCOL — the historical v2026.7.1-alfred.39 release shipped uninstallable.
           # Versions come from the workspace packages themselves, which is
           # exactly the substitution pnpm would have made.
           node -e '
@@ -357,16 +366,18 @@ jobs:
             echo "::error::npm pack produced no tarball."
             exit 1
           fi
-          mv "$built_tarball" alfred-intelligence.tgz
-          asset_size="$(stat -c '%s' alfred-intelligence.tgz 2>/dev/null || stat -f '%z' alfred-intelligence.tgz)"
-          echo "asset=alfred-intelligence.tgz" >> "$GITHUB_OUTPUT"
+          mv "$built_tarball" zolven-intelligence.tgz
+          asset_size="$(stat -c '%s' zolven-intelligence.tgz 2>/dev/null || stat -f '%z' zolven-intelligence.tgz)"
+          echo "asset=zolven-intelligence.tgz" >> "$GITHUB_OUTPUT"
           echo "bytes=$asset_size" >> "$GITHUB_OUTPUT"
-          echo "Tarball: alfred-intelligence.tgz ($asset_size bytes)"
+          echo "Tarball: zolven-intelligence.tgz ($asset_size bytes)"
 
       - name: Resolve release gate
         id: gate
+        env:
+          SKIP_RELEASE: ${{ inputs.skip_release }}
         run: |
-          if [ "${{ github.event.inputs.skip_release }}" = "true" ]; then
+          if [ "$SKIP_RELEASE" = "true" ]; then
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "::notice::skip_release input set; skipping GitHub Release creation."
           else
@@ -382,15 +393,15 @@ jobs:
           version="${{ steps.bump.outputs.version }}"
           upstream_tag="${{ steps.stable.outputs.tag }}"
           notes=$(cat <<EOF
-          Alfred Intelligence \`${version}\`.
+          Zolven Intelligence \`${version}\`.
 
           Rebased onto upstream \`${upstream_tag}\`. Branding patch applies cleanly.
 
-          Asset: \`alfred-intelligence.tgz\` (fixed name for installer consumption).
+          Asset: \`zolven-intelligence.tgz\` (fixed name for installer consumption).
           Consume via:
 
           \`\`\`
-          npm install -g https://github.com/alfreds-inc/alfred-intelligence/releases/latest/download/alfred-intelligence.tgz
+          npm install -g https://github.com/Zolven/zolven-intelligence/releases/latest/download/zolven-intelligence.tgz
           \`\`\`
 
           This release is published as the latest normal GitHub Release so
@@ -398,16 +409,16 @@ jobs:
           tarball immediately.
           EOF
           )
-          gh release create "$tag" alfred-intelligence.tgz \
+          gh release create "$tag" zolven-intelligence.tgz \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Alfred Intelligence ${version}" \
+            --title "Zolven Intelligence ${version}" \
             --notes "$notes" \
             --latest
 
       - name: Summary
         if: always()
         run: |
-          echo "### Alfred rebase + release" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Zolven rebase + release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upstream stable tag: \`${{ steps.stable.outputs.tag || '(not resolved)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upstream sha: \`${{ steps.stable.outputs.sha || '(n/a)' }}\`" >> "$GITHUB_STEP_SUMMARY"
