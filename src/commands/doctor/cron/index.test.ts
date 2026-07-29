@@ -502,7 +502,7 @@ describe("maybeRepairLegacyCronStore", () => {
       expectNoteContaining("1 cron job is still marked in-flight", "Cron");
       expectNoteContaining("shows it as `running`", "Cron");
       expectNoteContaining("marks such runs interrupted the next time it starts", "Cron");
-      expectNoteContaining("openclaw cron show <id>", "Cron");
+      expectNoteContaining("zolven-intelligence cron show <id>", "Cron");
 
       // Observer-only: no repair prompt and the running marker is left untouched.
       expect(prompter.confirm).not.toHaveBeenCalled();
@@ -564,7 +564,7 @@ describe("maybeRepairLegacyCronStore", () => {
       expectNoteContaining("re-fires it on error backoff", "Cron");
       expectNoteContaining("resets on the next successful run", "Cron");
       expectNoteContaining("interrupted by a gateway restart", "Cron");
-      expectNoteContaining("openclaw cron show <id>", "Cron");
+      expectNoteContaining("zolven-intelligence cron show <id>", "Cron");
 
       // Observer-only: no repair prompt and the failure counters stay untouched.
       expect(prompter.confirm).not.toHaveBeenCalled();

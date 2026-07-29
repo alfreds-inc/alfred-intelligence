@@ -139,8 +139,12 @@ describe("resolveGatewayInstallToken", () => {
 
     expect(result.token).toBeUndefined();
     expect(result.unavailableReason).toContain("gateway.auth.mode is unset");
-    expect(result.unavailableReason).toContain("openclaw config set gateway.auth.mode token");
-    expect(result.unavailableReason).toContain("openclaw config set gateway.auth.mode password");
+    expect(result.unavailableReason).toContain(
+      "zolven-intelligence config set gateway.auth.mode token",
+    );
+    expect(result.unavailableReason).toContain(
+      "zolven-intelligence config set gateway.auth.mode password",
+    );
     expect(replaceConfigFileMock).not.toHaveBeenCalled();
     expect(resolveSecretRefValuesMock).not.toHaveBeenCalled();
   });

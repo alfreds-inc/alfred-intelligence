@@ -69,7 +69,7 @@ export async function handlePortError(
       if (/openclaw|src\/index\.ts|dist\/index\.js/.test(details)) {
         runtime.error(
           warn(
-            "It looks like another Alfred instance is already running. Stop it or pick a different port.",
+            "It looks like another Zolven Intelligence instance is already running. Stop it or pick a different port.",
           ),
         );
       }

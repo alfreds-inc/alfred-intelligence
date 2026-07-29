@@ -2117,7 +2117,7 @@ describe("plugins cli install", () => {
     ).rejects.toThrow("__exit__:1");
 
     expect(installPluginFromGitSpec).not.toHaveBeenCalled();
-    expect(runtimeErrors.at(-1)).toContain("openclaw plugins install git:<repo>@<ref>");
+    expect(runtimeErrors.at(-1)).toContain("zolven-intelligence plugins install git:<repo>@<ref>");
   });
 
   it("passes dangerous force unsafe install to marketplace installs", async () => {

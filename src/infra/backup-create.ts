@@ -769,8 +769,8 @@ export async function createBackupArchive(
   if (plan.included.length === 0) {
     throw new Error(
       onlyConfig
-        ? "No Alfred config file was found to back up."
-        : "No local Alfred state was found to back up.",
+        ? "No Zolven Intelligence config file was found to back up."
+        : "No local Zolven Intelligence state was found to back up.",
     );
   }
 

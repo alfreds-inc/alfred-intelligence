@@ -73,6 +73,7 @@ const PACKAGE_DEPENDENCY_SECTIONS = [
   "peerDependencies",
   "devDependencies",
 ];
+const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@zolven/intelligence"]);
 const REQUIRED_BUNDLED_WORKSPACE_DEPENDENCIES = ["@openclaw/ai"];
 // Strict Docker artifacts bundle this private runtime rather than resolving it
 // from npm. Keep the concrete load-bearing entries explicit instead of
@@ -417,11 +418,18 @@ for (const requiredPrefix of REQUIRED_TARBALL_ENTRY_PREFIXES) {
     errors.push(`missing required tar entries under ${requiredPrefix}`);
   }
 }
+let packageName = "";
 let packageVersion = "";
 if (entrySet.has("package.json")) {
   try {
     const packageJson = JSON.parse(readTarEntry("package.json"));
+    packageName = typeof packageJson.name === "string" ? packageJson.name : "";
     packageVersion = typeof packageJson.version === "string" ? packageJson.version : "";
+    if (!ALLOWED_PACKAGE_NAMES.has(packageName)) {
+      errors.push(
+        `package.json name must be one of [${[...ALLOWED_PACKAGE_NAMES].join(", ")}]; found ${packageName || "<missing>"}`,
+      );
+    }
     errors.push(...collectWorkspaceProtocolDependencyErrors(packageJson, "package.json"));
     if (cliArgs.requireBundledWorkspaceDeps) {
       errors.push(
@@ -451,16 +459,20 @@ if (!entrySet.has("npm-shrinkwrap.json")) {
   try {
     const shrinkwrap = JSON.parse(readTarEntry("npm-shrinkwrap.json"));
     const rootPackage = shrinkwrap.packages?.[""];
-    if (shrinkwrap.name !== "openclaw") {
-      errors.push("npm-shrinkwrap.json root name must be openclaw");
+    if (shrinkwrap.name !== packageName) {
+      errors.push(
+        `npm-shrinkwrap.json name ${shrinkwrap.name ?? "<missing>"} does not match package.json name ${packageName || "<missing>"}`,
+      );
     }
     if (shrinkwrap.version !== packageVersion) {
       errors.push(
         `npm-shrinkwrap.json version ${shrinkwrap.version ?? "<missing>"} does not match package.json version ${packageVersion || "<missing>"}`,
       );
     }
-    if (!rootPackage || rootPackage.name !== "openclaw") {
-      errors.push("npm-shrinkwrap.json packages root must name openclaw");
+    if (!rootPackage || rootPackage.name !== packageName) {
+      errors.push(
+        `npm-shrinkwrap.json packages root name ${rootPackage?.name ?? "<missing>"} does not match package.json name ${packageName || "<missing>"}`,
+      );
     }
     if (rootPackage?.version !== packageVersion) {
       errors.push(

@@ -62,14 +62,14 @@ type NpmDistTagMirrorAuth = {
   hasAuth: boolean;
   source: "node-auth-token" | "npm-token" | "none";
 };
-// Accept upstream identity plus the @alfreds-inc/alfred-intelligence rebrand
-// so this script also passes against the Alfred fork without special-casing.
+// Accept upstream identity plus the Zolven Intelligence distribution so this
+// shared release guard validates both package contracts.
 const ALLOWED_REPOSITORY_URLS = new Set([
   "https://github.com/openclaw/openclaw",
-  "https://github.com/alfreds-inc/alfred-intelligence",
+  "https://github.com/Zolven/zolven-intelligence",
 ]);
-const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@alfreds-inc/alfred-intelligence"]);
-const ALLOWED_BIN_ENTRIES = new Set(["openclaw", "alfred-intelligence"]);
+const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@zolven/intelligence"]);
+const ALLOWED_BIN_ENTRIES = new Set(["openclaw", "zolven-intelligence"]);
 const OPTIONAL_LOCAL_EMBEDDING_RUNTIME_PACKAGE = "node-llama-cpp";
 const FS_SAFE_PACKAGE = "@openclaw/fs-safe";
 const REQUIRED_PACKED_PATHS = [
@@ -381,9 +381,9 @@ export function collectReleasePackageMetadataErrors(pkg: PackageJson): string[] 
   );
   if (!hasValidBinEntry) {
     errors.push(
-      `package.json bin must map at least one of [${[...ALLOWED_BIN_ENTRIES].join(", ")}] to "openclaw.mjs"; found ${
-        JSON.stringify(pkg.bin ?? {})
-      }.`,
+      `package.json bin must map at least one of [${[...ALLOWED_BIN_ENTRIES].join(", ")}] to "openclaw.mjs"; found ${JSON.stringify(
+        pkg.bin ?? {},
+      )}.`,
     );
   }
   if (pkg.dependencies?.[OPTIONAL_LOCAL_EMBEDDING_RUNTIME_PACKAGE]) {

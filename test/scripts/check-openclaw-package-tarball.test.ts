@@ -42,21 +42,20 @@ function withTarball(
   const root = mkdtempSync(join(tmpdir(), "openclaw-package-tarball-test-"));
   try {
     const packageRoot = join(root, "package");
+    const packageJson = { name: "openclaw", version, ...options.packageJson };
+    const packageName = String(packageJson.name);
     mkdirSync(join(packageRoot, "dist"), { recursive: true });
-    writeFileSync(
-      join(packageRoot, "package.json"),
-      JSON.stringify({ name: "openclaw", version, ...options.packageJson }),
-    );
+    writeFileSync(join(packageRoot, "package.json"), JSON.stringify(packageJson));
     if (options.includeShrinkwrap !== false) {
       writeFileSync(
         join(packageRoot, "npm-shrinkwrap.json"),
         JSON.stringify({
-          name: "openclaw",
+          name: packageName,
           version,
           lockfileVersion: 3,
           packages: {
             "": {
-              name: "openclaw",
+              name: packageName,
               version,
               ...options.shrinkwrapRootPackage,
             },
@@ -267,6 +266,38 @@ describe("check-openclaw-package-tarball", () => {
         expect(result.stdout).toContain("OpenClaw package tarball integrity passed.");
       },
       "2026.4.27",
+    );
+  });
+
+  it("accepts matching branded package and shrinkwrap names", () => {
+    withTarball(
+      [FLAT_PLUGIN_SDK_DECLARATION],
+      { [FLAT_PLUGIN_SDK_DECLARATION]: "export {};\n" },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status, result.stderr).toBe(0);
+        expect(result.stdout).toContain("OpenClaw package tarball integrity passed.");
+      },
+      "2026.7.1",
+      { packageJson: { name: "@zolven/intelligence" } },
+    );
+  });
+
+  it("rejects an unexpected package identity even when the shrinkwrap matches", () => {
+    withTarball(
+      [FLAT_PLUGIN_SDK_DECLARATION],
+      { [FLAT_PLUGIN_SDK_DECLARATION]: "export {};\n" },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(
+          "package.json name must be one of [openclaw, @zolven/intelligence]",
+        );
+      },
+      "2026.7.1",
+      { packageJson: { name: "@zolven/intelligense" } },
     );
   });
 

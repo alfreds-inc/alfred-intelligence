@@ -815,7 +815,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
           runtime,
         ),
       ).rejects.toThrow(
-        /only waits for an already-running gateway unless you pass `--install-daemon` to `openclaw onboard`[\s\S]*openclaw onboard --install-daemon[\s\S]*openclaw onboard --skip-health/,
+        /only waits for an already-running gateway unless you pass `--install-daemon` to `zolven-intelligence onboard`[\s\S]*zolven-intelligence onboard --install-daemon[\s\S]*zolven-intelligence onboard --skip-health/,
       );
     });
   }, 60_000);
@@ -957,7 +957,9 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       expect(parsed.installDaemon).toBe(true);
       expect(parsed.detail).toContain("1006 abnormal closure");
       expect(parsed.gateway?.wsUrl).toContain("ws://127.0.0.1:");
-      expect(parsed.hints).toContain("Run `openclaw gateway status --deep` for more detail.");
+      expect(parsed.hints).toContain(
+        "Run `zolven-intelligence gateway status --deep` for more detail.",
+      );
       expect(parsed.diagnostics?.service?.label).toBe("LaunchAgent");
       expect(parsed.diagnostics?.service?.loaded).toBe(true);
       expect(parsed.diagnostics?.service?.runtimeStatus).toBe("running");

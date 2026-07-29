@@ -1,20 +1,23 @@
 {
-  "name": "@alfreds-inc/alfred-intelligence",
+  "name": "@zolven/intelligence",
   "version": "2026.7.1",
-  "description": "Multi-channel AI gateway with extensible messaging integrations",
-  "keywords": [],
-  "homepage": "https://github.com/alfreds-inc/alfred-intelligence#readme",
+  "description": "Zolven Intelligence, a branded OpenClaw runtime for Zolven",
+  "keywords": [
+    "zolven",
+    "openclaw"
+  ],
+  "homepage": "https://github.com/Zolven/zolven-intelligence#readme",
   "bugs": {
-    "url": "https://github.com/alfreds-inc/alfred-intelligence/issues"
+    "url": "https://github.com/Zolven/zolven-intelligence/issues"
   },
   "license": "MIT",
-  "author": "",
+  "author": "Zolven",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alfreds-inc/alfred-intelligence.git"
+    "url": "git+https://github.com/Zolven/zolven-intelligence.git"
   },
   "bin": {
-    "alfred-intelligence": "openclaw.mjs",
+    "zolven-intelligence": "openclaw.mjs",
     "openclaw": "openclaw.mjs"
   },
   "directories": {

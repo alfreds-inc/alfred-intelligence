@@ -1301,7 +1301,7 @@ describe("modelsAuthLoginCommand", () => {
     const runtime = createRuntime();
 
     await expect(modelsAuthLoginCommand({ provider: "anthropic" }, runtime)).rejects.toThrow(
-      'Unknown provider "anthropic". Loaded providers: openai. Verify plugins via `openclaw plugins list --json`.',
+      'Unknown provider "anthropic". Loaded providers: openai. Verify plugins via `zolven-intelligence plugins list --json`.',
     );
   });
 
@@ -1429,7 +1429,7 @@ describe("modelsAuthLoginCommand", () => {
     );
 
     expect(validateMessages).toEqual([
-      "That looks like an OpenAI API key. Use openclaw models auth paste-api-key --provider openai for API-key auth.",
+      "That looks like an OpenAI API key. Use zolven-intelligence models auth paste-api-key --provider openai for API-key auth.",
     ]);
     expect(mocks.upsertAuthProfileWithLock).not.toHaveBeenCalled();
     expect(mocks.updateConfig).not.toHaveBeenCalled();
@@ -1558,7 +1558,7 @@ describe("modelsAuthLoginCommand", () => {
     );
 
     expect(validateMessages).toEqual([
-      "That looks like token or OAuth material, not an OpenAI API key. Use openclaw models auth paste-token --provider openai for token auth material.",
+      "That looks like token or OAuth material, not an OpenAI API key. Use zolven-intelligence models auth paste-token --provider openai for token auth material.",
     ]);
     expect(mocks.upsertAuthProfileWithLock).not.toHaveBeenCalled();
     expect(mocks.updateConfig).not.toHaveBeenCalled();
@@ -1571,7 +1571,7 @@ describe("modelsAuthLoginCommand", () => {
     await expect(
       modelsAuthPasteTokenCommand({ provider: "openai", agent: "missing" }, runtime),
     ).rejects.toThrow(
-      'Unknown agent id "missing". Use "openclaw agents list" to see configured agents.',
+      'Unknown agent id "missing". Use "zolven-intelligence agents list" to see configured agents.',
     );
 
     expect(mocks.clackPassword).not.toHaveBeenCalled();

@@ -125,7 +125,7 @@ describe("irc inbound behavior", () => {
     expect(sendReply).toHaveBeenCalledWith(
       "alice",
       [
-        "Alfred Intelligence: access not configured.",
+        "Zolven Intelligence: access not configured.",
         "",
         "Your IRC id: alice!ident@example.com",
         "Pairing code:",

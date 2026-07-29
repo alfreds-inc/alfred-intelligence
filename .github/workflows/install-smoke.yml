@@ -406,7 +406,7 @@ jobs:
     needs: [preflight, root_dockerfile_image]
     # Upstream-only lane. It packs its baseline from the npm registry
     # (`${OPENCLAW_INSTALL_PACKAGE:-openclaw}@<version>`), but the fork ships
-    # from GitHub Releases and `@alfreds-inc/alfred-intelligence` is never
+    # from GitHub Releases and `@zolven/intelligence` is never
     # published to npm — so on this repo the baseline falls back to upstream
     # `openclaw` and the update-swap then fails with ENOENT on
     # `<stage>/lib/node_modules/openclaw`. That is a cross-package migration no

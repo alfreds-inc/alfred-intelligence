@@ -150,12 +150,16 @@ async function setupDoctorCompletionTest(usesSlowPattern: boolean) {
   if (usesSlowPattern) {
     await fs.writeFile(
       profilePath,
-      '# test bashrc\n[ -f "/tmp/nonexistent" ] && source <(openclaw completion bash)\n',
+      '# test bashrc\n[ -f "/tmp/nonexistent" ] && source <(zolven-intelligence completion bash)\n',
       "utf-8",
     );
     const cacheDir = path.join(stateDir, "completions");
     await fs.mkdir(cacheDir, { recursive: true });
-    await fs.writeFile(path.join(cacheDir, "openclaw.bash"), "# completion cache\n", "utf-8");
+    await fs.writeFile(
+      path.join(cacheDir, "zolven-intelligence.bash"),
+      "# completion cache\n",
+      "utf-8",
+    );
   }
   return profilePath;
 }

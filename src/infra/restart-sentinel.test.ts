@@ -554,7 +554,7 @@ describe("restart sentinel message dedup", () => {
 
   it("formats the non-interactive doctor command as actionability guidance", () => {
     expect(formatDoctorNonInteractiveHint({ PATH: "/usr/bin:/bin" })).toBe(
-      "Recommended follow-up: run openclaw doctor --non-interactive in a terminal or approvals-capable OpenClaw surface.",
+      "Recommended follow-up: run zolven-intelligence doctor --non-interactive in a terminal or approvals-capable OpenClaw surface.",
     );
   });
 
@@ -565,7 +565,7 @@ describe("restart sentinel message dedup", () => {
         PATH: "/usr/bin:/bin",
       }),
     ).toBe(
-      "Recommended follow-up: run openclaw --profile isolated doctor --non-interactive in a terminal or approvals-capable OpenClaw surface.",
+      "Recommended follow-up: run zolven-intelligence --profile isolated doctor --non-interactive in a terminal or approvals-capable OpenClaw surface.",
     );
   });
 });

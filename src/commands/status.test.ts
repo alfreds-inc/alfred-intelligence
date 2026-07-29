@@ -1164,7 +1164,7 @@ describe("statusCommand", () => {
       expectLogsInclude(logs, token);
     }
     expectLogsInclude(logs, "legacy-plugin still uses legacy before_agent_start");
-    expectLogsMatch(logs, /openclaw (?:--profile isolated )?status --all/);
+    expectLogsMatch(logs, /zolven-intelligence (?:--profile isolated )?status --all/);
     expectLogsInclude(logs, "Cache");
     expectLogsInclude(logs, "40% hit");
     expectLogsInclude(logs, "read 2.0k");
@@ -1281,7 +1281,7 @@ describe("statusCommand", () => {
     const joined = await runStatusAndGetJoinedLogs();
     expect(joined).toContain("node → gateway.example.com:19000 · no local gateway");
     expect(joined).not.toContain("Gateway: local · ws://127.0.0.1:18789");
-    expect(joined).toContain("openclaw --profile isolated node status");
+    expect(joined).toContain("zolven-intelligence --profile isolated node status");
     expect(joined).not.toContain("Fix reachability first");
   });
 

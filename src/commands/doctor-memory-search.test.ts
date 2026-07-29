@@ -211,7 +211,7 @@ describe("noteMemorySearchHealth", () => {
     expect(note).toHaveBeenCalledTimes(1);
     const message = firstNoteMessage();
     expect(message).toContain('Memory search provider is set to "local"');
-    expect(message).toContain("openclaw plugins install @openclaw/llama-cpp-provider");
+    expect(message).toContain("zolven-intelligence plugins install @openclaw/llama-cpp-provider");
   });
 
   it("supports silent structured collection through an injected note sink", async () => {
@@ -611,7 +611,7 @@ describe("noteMemorySearchHealth", () => {
     const message = String(note.mock.calls[0]?.[0] ?? "");
     expect(message).toContain("memorySearch.sources with sessions");
     expect(message).toContain("memory.qmd.sessions.enabled is not true");
-    expect(message).toContain("openclaw config set memory.qmd.sessions.enabled true");
+    expect(message).toContain("zolven-intelligence config set memory.qmd.sessions.enabled true");
   });
 
   it("warns when QMD session export is explicitly disabled", async () => {
@@ -911,7 +911,7 @@ describe("noteMemorySearchHealth", () => {
     const message = firstNoteMessage();
     expect(message).toContain('provider is set to "openai-compatible"');
     expect(message).toContain("remote.baseUrl");
-    expect(message).toContain("openclaw config set");
+    expect(message).toContain("zolven-intelligence config set");
     expect(resolveApiKeyForProvider).not.toHaveBeenCalled();
   });
 
@@ -930,7 +930,7 @@ describe("noteMemorySearchHealth", () => {
     const message = firstNoteMessage();
     expect(message).toContain('provider is set to "openai-compatible"');
     expect(message).toContain("memorySearch.model");
-    expect(message).toContain("openclaw config set");
+    expect(message).toContain("zolven-intelligence config set");
     expect(resolveApiKeyForProvider).not.toHaveBeenCalled();
   });
 
@@ -1229,7 +1229,7 @@ describe("noteMemorySearchHealth", () => {
 
     const message = firstNoteMessage();
     expect(message).toContain("Gateway memory probe for default agent is not ready");
-    expect(message).toContain("openclaw configure --section model");
+    expect(message).toContain("zolven-intelligence configure --section model");
     expect(message).not.toContain("openclaw auth add --provider");
   });
 
@@ -1246,7 +1246,7 @@ describe("noteMemorySearchHealth", () => {
     const message = firstNoteMessage();
     expect(message).toContain('provider is set to "openai"');
     expect(message).toContain("OPENAI_API_KEY");
-    expect(message).toContain("openclaw configure --section model");
+    expect(message).toContain("zolven-intelligence configure --section model");
   });
 
   it("does not probe unrelated embedding providers for legacy auto mode", async () => {

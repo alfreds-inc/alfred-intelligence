@@ -86,7 +86,7 @@ describe("requireValidConfigSnapshot", () => {
       [
         "Plugin compatibility: 1 notice.",
         "- legacy-plugin still uses legacy before_agent_start; keep regression coverage on this plugin, and prefer before_model_resolve/before_prompt_build for new work.",
-        "Review: openclaw doctor",
+        "Review: zolven-intelligence doctor",
       ].join("\n"),
     );
   });
@@ -156,7 +156,7 @@ describe("requireValidConfigSnapshot", () => {
     const config = await requireValidConfigSnapshot(runtime);
 
     expect(config).toBeNull();
-    expect(runtime.error).toHaveBeenCalledWith("Fix: openclaw doctor --fix");
+    expect(runtime.error).toHaveBeenCalledWith("Fix: zolven-intelligence doctor --fix");
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 });

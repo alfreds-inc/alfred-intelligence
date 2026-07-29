@@ -1,8 +1,8 @@
 // Daemon lifecycle core tests cover service lifecycle transitions and platform adapters.
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
-import type { GatewayService } from "../../daemon/service.js";
 import type { GatewayServiceControlArgs } from "../../daemon/service-types.js";
+import type { GatewayService } from "../../daemon/service.js";
 import {
   defaultRuntime,
   resetLifecycleRuntimeLogs,
@@ -599,7 +599,7 @@ describe("runServiceRestart token drift", () => {
     const payload = readJsonLog<{ ok?: boolean; error?: string; hints?: string[] }>();
     expect(payload.ok).toBe(false);
     expect(payload.error).toContain("service needs repair");
-    expect(payload.hints).toEqual(["openclaw gateway install --force"]);
+    expect(payload.hints).toEqual(["zolven-intelligence gateway install --force"]);
     expect(service.restart).not.toHaveBeenCalled();
   });
 

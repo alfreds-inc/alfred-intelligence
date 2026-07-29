@@ -1346,7 +1346,7 @@ describe("buildFailoverRemediationHint", () => {
       model: "claude-opus-4-7",
     });
     expect(buildFailoverRemediationHint(err)).toBe(
-      "Re-authenticate with: openclaw models auth login --provider 'anthropic' --force",
+      "Re-authenticate with: zolven-intelligence models auth login --provider 'anthropic' --force",
     );
   });
 
@@ -1357,16 +1357,16 @@ describe("buildFailoverRemediationHint", () => {
       model: "gemini-3.1-pro-preview",
     });
     expect(buildFailoverRemediationHint(err)).toBe(
-      "Re-authenticate with: openclaw models auth login --provider 'google-gemini-cli' --force",
+      "Re-authenticate with: zolven-intelligence models auth login --provider 'google-gemini-cli' --force",
     );
   });
 
   it("quotes provider ids that contain shell metacharacters", () => {
     expect(buildProviderReauthCommand("custom;touch /tmp/pwned")).toBe(
-      "openclaw models auth login --provider 'custom;touch /tmp/pwned' --force",
+      "zolven-intelligence models auth login --provider 'custom;touch /tmp/pwned' --force",
     );
     expect(buildProviderReauthCommand("custom'provider")).toBe(
-      "openclaw models auth login --provider 'custom'\\''provider' --force",
+      "zolven-intelligence models auth login --provider 'custom'\\''provider' --force",
     );
   });
 
@@ -1376,10 +1376,10 @@ describe("buildFailoverRemediationHint", () => {
 
   it("wraps rendered provider commands in the standard CLI formatter", () => {
     expect(buildProviderReauthCommand("anthropic", { OPENCLAW_PROFILE: "work" })).toBe(
-      "openclaw --profile work models auth login --provider 'anthropic' --force",
+      "zolven-intelligence --profile work models auth login --provider 'anthropic' --force",
     );
     expect(buildProviderReauthCommand("anthropic", { OPENCLAW_CONTAINER_HINT: "dev" })).toBe(
-      "openclaw --container dev models auth login --provider 'anthropic' --force",
+      "zolven-intelligence --container dev models auth login --provider 'anthropic' --force",
     );
   });
 

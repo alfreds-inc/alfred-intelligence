@@ -654,7 +654,7 @@ describe("exec approvals CLI", () => {
       "tools.exec askFallback",
       {
         effective: "deny",
-        source: "OpenClaw default (deny)",
+        source: "Zolven Intelligence default (deny)",
       },
     );
 
@@ -671,7 +671,7 @@ describe("exec approvals CLI", () => {
     });
     expectFields(requireRecord(agentScope.askFallback, "agent askFallback"), "agent askFallback", {
       effective: "deny",
-      source: "OpenClaw default (deny)",
+      source: "Zolven Intelligence default (deny)",
     });
   });
 
