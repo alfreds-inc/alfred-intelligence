@@ -198,7 +198,7 @@ describe("noteWorkspaceStatus", () => {
         target: "codex",
         requirement: "plugin-version-drift",
         message: expect.stringContaining("2026.5.30-beta.1"),
-        fixHint: expect.stringContaining("openclaw plugins update codex"),
+        fixHint: expect.stringContaining("zolven-intelligence plugins update codex"),
       }),
     ]);
   });
@@ -260,7 +260,7 @@ describe("noteWorkspaceStatus", () => {
         target: "flow-123",
         requirement: "taskflow-recovery",
         message: expect.stringContaining("task-missing"),
-        fixHint: expect.stringContaining("openclaw tasks flow show flow-123"),
+        fixHint: expect.stringContaining("zolven-intelligence tasks flow show flow-123"),
       }),
     ]);
   });
@@ -305,8 +305,8 @@ describe("noteWorkspaceStatus", () => {
       const [[body]] = driftCalls;
       expect(body).toContain("1 active official plugin not on OpenClaw 2026.6.1");
       expect(body).toContain("codex: 2026.5.30-beta.1 (npm) -> expected 2026.6.1");
-      expect(body).toContain("openclaw plugins update codex");
-      expect(body).toContain("openclaw gateway restart");
+      expect(body).toContain("zolven-intelligence plugins update codex");
+      expect(body).toContain("zolven-intelligence gateway restart");
     } finally {
       noteSpy.mockRestore();
     }
@@ -352,9 +352,11 @@ describe("noteWorkspaceStatus", () => {
       const driftCalls = noteSpy.mock.calls.filter(([, title]) => title === "Plugin version drift");
       expect(driftCalls).toHaveLength(1);
       const [[body]] = driftCalls;
-      expect(body).toContain("openclaw plugins update @openclaw/brave-plugin@2026.6.10-beta.1");
-      expect(body).not.toContain("openclaw plugins update brave");
-      expect(body).toContain("openclaw gateway restart");
+      expect(body).toContain(
+        "zolven-intelligence plugins update @openclaw/brave-plugin@2026.6.10-beta.1",
+      );
+      expect(body).not.toContain("zolven-intelligence plugins update brave");
+      expect(body).toContain("zolven-intelligence gateway restart");
     } finally {
       noteSpy.mockRestore();
     }
@@ -473,7 +475,7 @@ describe("noteWorkspaceStatus", () => {
       expect(recoveryCalls).toHaveLength(1);
       const [[body]] = recoveryCalls;
       expect(body).toContain("flow-123");
-      expect(body).toContain("openclaw tasks flow show <flow-id>");
+      expect(body).toContain("zolven-intelligence tasks flow show <flow-id>");
     } finally {
       noteSpy.mockRestore();
     }

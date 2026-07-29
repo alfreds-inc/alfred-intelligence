@@ -1662,7 +1662,7 @@ describe("doctor config flow", () => {
       previewNotes.mock.calls.some(
         ([message, title]) =>
           title === "Doctor" &&
-          message.includes("openclaw doctor --fix") &&
+          message.includes("zolven-intelligence doctor --fix") &&
           message.includes("rotate hooks.token"),
       ),
     ).toBe(true);
@@ -2899,7 +2899,9 @@ describe("doctor config flow", () => {
         noteSpy.mock.calls.some(
           ([message, title]) =>
             title === "Doctor" &&
-            message.includes('Run "openclaw doctor --fix" to migrate legacy config keys.'),
+            message.includes(
+              'Run "zolven-intelligence doctor --fix" to migrate legacy config keys.',
+            ),
         ),
       ).toBe(true);
     } finally {

@@ -480,7 +480,7 @@ describe("gateway startup config validation", () => {
     vi.mocked(configIo.readConfigFileSnapshot).mockResolvedValueOnce(invalidSnapshot);
 
     await expectStartupRejects(
-      `Invalid config at ${configPath}:\ngateway.mode: Expected 'local' or 'remote'\nRun "openclaw doctor --fix" to repair, then retry.\nIf startup is still blocked, inspect the adjacent .bak backup before restoring it manually.`,
+      `Invalid config at ${configPath}:\ngateway.mode: Expected 'local' or 'remote'\nRun "zolven-intelligence doctor --fix" to repair, then retry.\nIf startup is still blocked, inspect the adjacent .bak backup before restoring it manually.`,
     );
   });
 
@@ -539,7 +539,7 @@ describe("gateway startup config validation", () => {
     });
     vi.mocked(configIo.readConfigFileSnapshot).mockResolvedValueOnce(invalidSnapshot);
 
-    await expectStartupRejects('Run "openclaw doctor --fix" to repair, then retry.');
+    await expectStartupRejects('Run "zolven-intelligence doctor --fix" to repair, then retry.');
   });
 
   it("rejects legacy config entries in Nix mode", async () => {

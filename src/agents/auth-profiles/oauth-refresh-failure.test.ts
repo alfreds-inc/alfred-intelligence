@@ -24,7 +24,7 @@ describe("oauth refresh failure hints", () => {
       reason: "invalid_grant",
     });
     expect(buildOAuthRefreshFailureLoginCommand("openai")).toBe(
-      "openclaw models auth login --provider openai",
+      "zolven-intelligence models auth login --provider openai",
     );
   });
 
@@ -33,7 +33,7 @@ describe("oauth refresh failure hints", () => {
       buildOAuthRefreshFailureLoginCommand("openai", {
         profileId: "Work Profile",
       }),
-    ).toBe("openclaw models auth login --provider openai --profile-id 'Work Profile'");
+    ).toBe("zolven-intelligence models auth login --provider openai --profile-id 'Work Profile'");
   });
 
   it("renders login commands containing backticks as valid Markdown code spans", () => {
@@ -42,7 +42,7 @@ describe("oauth refresh failure hints", () => {
     });
 
     expect(formatOAuthRefreshFailureLoginCommandMarkdown(command)).toBe(
-      "``openclaw models auth login --provider openai --profile-id 'openai:work`slot'``",
+      "``zolven-intelligence models auth login --provider openai --profile-id 'openai:work`slot'``",
     );
   });
 
@@ -99,7 +99,7 @@ describe("oauth refresh failure hints", () => {
       reason: "revoked",
     });
     expect(buildOAuthRefreshFailureLoginCommand("claude-cli")).toBe(
-      "claude auth login && openclaw models auth login --provider anthropic --method cli",
+      "claude auth login && zolven-intelligence models auth login --provider anthropic --method cli",
     );
   });
 
@@ -195,7 +195,7 @@ describe("claude-cli oauth-expiry — real HTTP server (no fetch mock)", () => {
           (caught: unknown) => (caught instanceof Error ? caught : new Error(String(caught))),
         );
         expect(error?.message).toContain(
-          "Re-auth with `claude auth login && openclaw models auth login --provider anthropic --method cli`",
+          "Re-auth with `claude auth login && zolven-intelligence models auth login --provider anthropic --method cli`",
         );
         console.log(
           `[claude-cli-oauth-proof] server=401 → re-auth hint surfaced: ${error?.message}`,

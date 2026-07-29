@@ -71,7 +71,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai-codex: refresh_token_reused. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- openai-codex:default: re-auth required [refresh_token_reused] — Run `openclaw models auth login --provider openai`.",
+      "- openai-codex:default: re-auth required [refresh_token_reused] — Run `zolven-intelligence models auth login --provider openai`.",
     );
   });
 
@@ -84,7 +84,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai-codex: temporary upstream issue. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- openai-codex:default: OAuth refresh failed — Try again; if this persists, run `openclaw models auth login --provider openai`.",
+      "- openai-codex:default: OAuth refresh failed — Try again; if this persists, run `zolven-intelligence models auth login --provider openai`.",
     );
   });
 
@@ -97,7 +97,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai: invalid_grant. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- OpenAI Work Profile: re-auth required [invalid_grant] — Run `openclaw models auth login --provider openai --profile-id 'OpenAI Work Profile'`.",
+      "- OpenAI Work Profile: re-auth required [invalid_grant] — Run `zolven-intelligence models auth login --provider openai --profile-id 'OpenAI Work Profile'`.",
     );
   });
 
@@ -110,7 +110,7 @@ describe("resolveUnusableProfileHint", () => {
           "OAuth token refresh failed for openai-codex`\nrm -rf /: invalid_grant. Please try again or re-authenticate.",
       }),
     ).toBe(
-      "- openai-codex:default: re-auth required [invalid_grant] — Run `openclaw models auth login --provider openai`.",
+      "- openai-codex:default: re-auth required [invalid_grant] — Run `zolven-intelligence models auth login --provider openai`.",
     );
   });
 

@@ -31,7 +31,7 @@ describe("resetCommand", () => {
 
     expect(
       cleanupCommandLogMessages(runtime).some((message) =>
-        message.includes("openclaw backup create"),
+        message.includes("zolven-intelligence backup create"),
       ),
     ).toBe(true);
   });
@@ -46,7 +46,7 @@ describe("resetCommand", () => {
 
     expect(
       cleanupCommandLogMessages(runtime).some((message) =>
-        message.includes("openclaw backup create"),
+        message.includes("zolven-intelligence backup create"),
       ),
     ).toBe(false);
   });
