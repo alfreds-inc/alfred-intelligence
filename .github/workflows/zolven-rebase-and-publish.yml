@@ -10,15 +10,21 @@
 #      On conflict, open an issue and stop — humans resolve.
 #   3. `pnpm install` + `pnpm check` (typecheck + lint + static checks). Test
 #      suite is intentionally skipped — see "Run check suite" note.
-#   4. Bump the fork version to `<upstream-stable>-zolven.<run-number>`.
-#   5. Push the rebased branch, then create a release-only bump commit and tag.
-#      The bump commit is intentionally left on the tag only so the next rebase
-#      does not have to replay stale `release:` commits.
-#   6. `pnpm pack` to build the tarball, rename it to the fixed filename
-#      `zolven-intelligence.tgz`, and attach as an asset on a GitHub Release.
-#      Release is published as the latest normal release so
-#      `releases/latest/download/…` immediately resolves to the tarball the
-#      installer consumes.
+#   4. Resolve the fork version `<upstream-stable>-zolven.<run-number>` and
+#      write it into package.json AND npm-shrinkwrap.json (both ship in the
+#      tarball; a stale shrinkwrap version contradicts the manifest).
+#   5. Build the tarball as the fixed filename `zolven-intelligence.tgz`, then
+#      SMOKE-INSTALL it (`npm install -g` into a throwaway prefix) and verify
+#      the installed version and both bins. Nothing immutable exists yet: a
+#      broken artifact fails here with no tag pushed. (v2026.7.1-alfred.39
+#      shipped uninstallable because packing was validated only by releasing.)
+#   6. Only after the smoke passes — and only when skip_release is false —
+#      create the release-only bump commit and tag, push the tag, and attach
+#      the tarball to a GitHub Release published as latest so
+#      `releases/latest/download/…` immediately resolves to it. The bump
+#      commit is intentionally left on the tag only so the next rebase does
+#      not have to replay stale `release:` commits. With skip_release=true the
+#      run is genuinely rebase-and-pack-only: no commit, no tag, no release.
 #
 # No npm registry, no NPM_TOKEN. Release assets ride on the default
 # GITHUB_TOKEN.
@@ -248,20 +254,31 @@ jobs:
       - name: Push rebased branch
         run: git push origin "HEAD:${FORK_BRANCH}" --force-with-lease
 
-      - name: Bump fork version
-        id: bump
+      - name: Resolve fork release version
+        id: next
         run: |
           base="${{ steps.stable.outputs.version }}"
           next="${base}-zolven.${GITHUB_RUN_NUMBER}"
-          node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('./package.json','utf8'));p.version='${next}';fs.writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n');"
-          git add package.json
-          git commit -m "release: ${next}" --no-verify
-          git tag -a "v${next}" -m "Zolven Intelligence ${next}"
           echo "version=$next" >> "$GITHUB_OUTPUT"
           echo "tag=v${next}" >> "$GITHUB_OUTPUT"
+          echo "Release version: $next"
 
-      - name: Push release tag
-        run: git push origin "${{ steps.bump.outputs.tag }}"
+      - name: Apply release version for packaging
+        # Uncommitted on purpose: the tarball must carry the release version,
+        # but the tag-only bump commit is created later, after the packed
+        # artifact has survived the install smoke. npm-shrinkwrap.json ships
+        # in the tarball, so its version fields must move with package.json.
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            const next = '${{ steps.next.outputs.version }}';
+            for (const file of ['package.json', 'npm-shrinkwrap.json']) {
+              const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+              json.version = next;
+              if (json.packages && json.packages['']) json.packages[''].version = next;
+              fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
+            }
+          "
 
       - name: Pack the npm tarball
         id: pack
@@ -368,6 +385,33 @@ jobs:
           echo "bytes=$asset_size" >> "$GITHUB_OUTPUT"
           echo "Tarball: zolven-intelligence.tgz ($asset_size bytes)"
 
+      - name: Smoke-install the tarball
+        # The only proof a tarball installs is installing it. This runs the
+        # same command the Zolven installer runs, into a throwaway prefix,
+        # before any tag or release exists — the failure mode that shipped
+        # v2026.7.1-alfred.39 (EUNSUPPORTEDPROTOCOL at install time) dies
+        # here instead of in front of a customer.
+        run: |
+          prefix="$(mktemp -d)"
+          npm install -g --prefix "$prefix" ./zolven-intelligence.tgz
+
+          manifest="$prefix/lib/node_modules/@zolven/intelligence/package.json"
+          installed_version="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('$manifest','utf8')).version)")"
+          expected="${{ steps.next.outputs.version }}"
+          if [ "$installed_version" != "$expected" ]; then
+            echo "::error::Installed package version is ${installed_version}, expected ${expected} (shrinkwrap/manifest drift)."
+            exit 1
+          fi
+
+          for bin in zolven-intelligence openclaw; do
+            if [ ! -x "$prefix/bin/$bin" ]; then
+              echo "::error::Installed package does not expose an executable '$bin' bin."
+              exit 1
+            fi
+          done
+          timeout 120 "$prefix/bin/zolven-intelligence" --version
+          echo "Smoke install OK: @zolven/intelligence@${installed_version} (bins: zolven-intelligence, openclaw)"
+
       - name: Resolve release gate
         id: gate
         env:
@@ -380,13 +424,38 @@ jobs:
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Commit release bump and push tag
+        if: steps.gate.outputs.release == 'true'
+        run: |
+          # The pack step rewrote package.json (workspace: resolution) and
+          # pruned node_modules; restore tracked state and re-apply only the
+          # version bump so the tag carries a clean, version-only commit.
+          # The commit stays tag-only (the branch was already pushed), same
+          # contract as before: the next rebase never replays release commits.
+          git checkout -- package.json npm-shrinkwrap.json
+          next="${{ steps.next.outputs.version }}"
+          node -e "
+            const fs = require('node:fs');
+            const next = '${next}';
+            for (const file of ['package.json', 'npm-shrinkwrap.json']) {
+              const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+              json.version = next;
+              if (json.packages && json.packages['']) json.packages[''].version = next;
+              fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
+            }
+          "
+          git add package.json npm-shrinkwrap.json
+          git commit -m "release: ${next}" --no-verify
+          git tag -a "v${next}" -m "Zolven Intelligence ${next}"
+          git push origin "v${next}"
+
       - name: Create GitHub Release
         if: steps.gate.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="${{ steps.bump.outputs.tag }}"
-          version="${{ steps.bump.outputs.version }}"
+          tag="${{ steps.next.outputs.tag }}"
+          version="${{ steps.next.outputs.version }}"
           upstream_tag="${{ steps.stable.outputs.tag }}"
           notes=$(cat <<EOF
           Zolven Intelligence \`${version}\`.
@@ -418,7 +487,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upstream stable tag: \`${{ steps.stable.outputs.tag || '(not resolved)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upstream sha: \`${{ steps.stable.outputs.sha || '(n/a)' }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Fork version: \`${{ steps.bump.outputs.version || '(not bumped)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Fork version: \`${{ steps.next.outputs.version || '(not resolved)' }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Tarball: \`${{ steps.pack.outputs.asset || '(not packed)' }}\` (${{ steps.pack.outputs.bytes || '—' }} bytes)" >> "$GITHUB_STEP_SUMMARY"
           echo "- GitHub Release: \`${{ steps.gate.outputs.release || 'false' }}\` (latest)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
