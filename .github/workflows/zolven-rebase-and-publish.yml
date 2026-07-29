@@ -61,8 +61,10 @@ jobs:
     if: github.ref_name == 'zolven-brand'
     runs-on: ubuntu-latest
     # The prepack build (tsdown core + all bundled extensions) runs on a
-    # 2-core hosted runner and takes ~1h on current upstream; leave headroom.
-    timeout-minutes: 150
+    # 2-core hosted runner; observed 2.5h+ on 2026-07-29 (run 30463038341 hit
+    # the previous 150-minute limit mid-prepack). Hosted-runner speed varies
+    # widely — keep generous headroom.
+    timeout-minutes: 300
     steps:
       - name: Checkout fork branch (full history)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
