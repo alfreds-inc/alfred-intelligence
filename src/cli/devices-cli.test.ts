@@ -536,7 +536,7 @@ describe("devices cli approve", () => {
     const errorOutput = readRuntimeErrorOutput();
     expect(errorOutput).toContain("No pending device request matches");
     expect(errorOutput).toContain("Node reapproval pending for Colin's S25");
-    expect(errorOutput).toContain("openclaw nodes approve node-req-1");
+    expect(errorOutput).toContain("zolven-intelligence nodes approve node-req-1");
     expect(errorOutput).toContain(
       "Reuse the same connection options when rerunning: --url, --token.",
     );
@@ -1408,7 +1408,7 @@ describe("devices cli local fallback", () => {
 
     const errorOutput = stripAnsi(readRuntimeErrorOutput());
     expect(errorOutput).toContain("No pending device request matches req-old");
-    expect(errorOutput).toContain("openclaw devices list");
+    expect(errorOutput).toContain("zolven-intelligence devices list");
     expect(errorOutput).not.toContain("unknown requestId");
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(approveDevicePairing).not.toHaveBeenCalled();
@@ -1476,7 +1476,7 @@ describe("devices cli local fallback", () => {
     expect(approveDevicePairing).not.toHaveBeenCalled();
     const errorOutput = stripAnsi(readRuntimeErrorOutput());
     expect(errorOutput).toContain("No pending device request matches req-default");
-    expect(errorOutput).toContain("openclaw devices list");
+    expect(errorOutput).toContain("zolven-intelligence devices list");
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
@@ -1551,7 +1551,7 @@ describe("devices cli list", () => {
     expectGatewayCall(1, { method: "node.list" });
     const output = readRuntimeOutput();
     expect(output).toContain("Node reapproval pending for Colin's S25");
-    expect(output).toContain("openclaw nodes approve node-req-1");
+    expect(output).toContain("zolven-intelligence nodes approve node-req-1");
     expect(output).toContain("Reuse the same connection options when rerunning: --url, --token.");
     expect(output).not.toContain("gateway-user");
     expect(output).not.toContain("url-secret");

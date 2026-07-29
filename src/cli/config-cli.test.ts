@@ -761,8 +761,8 @@ describe("config cli", () => {
       ).rejects.toThrow("__exit__:1");
 
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
-      expectErrorIncludes("openclaw plugins install <spec>");
-      expectErrorIncludes("openclaw plugins update <plugin-id>");
+      expectErrorIncludes("zolven-intelligence plugins install <spec>");
+      expectErrorIncludes("zolven-intelligence plugins update <plugin-id>");
     });
 
     it("rejects auto-managed meta.lastTouchedVersion config updates (#80849)", async () => {
@@ -3402,9 +3402,9 @@ describe("config cli", () => {
 
       expectErrorIncludes(`Config path not found in authored config: ${aliasPath}.`);
       expectErrorIncludes("It only exists after runtime defaults are applied");
-      expectErrorIncludes("openclaw config set <path> <value>");
+      expectErrorIncludes("zolven-intelligence config set <path> <value>");
       expect(mockError.mock.calls.map((call) => String(call[0])).join("\n")).not.toContain(
-        "Run openclaw config get <path>",
+        "Run zolven-intelligence config get <path>",
       );
 
       setSnapshot(resolved, runtimeMerged);

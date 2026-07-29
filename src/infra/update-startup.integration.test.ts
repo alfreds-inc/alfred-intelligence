@@ -20,11 +20,14 @@ vi.mock("./update-check.js", async () => {
   const actual = await vi.importActual<typeof import("./update-check.js")>("./update-check.js");
   return {
     ...actual,
-    checkUpdateStatus: vi.fn(async () => ({
-      root: "/opt/openclaw",
-      installKind: "package",
-      packageManager: "npm",
-    }) satisfies UpdateCheckResult),
+    checkUpdateStatus: vi.fn(
+      async () =>
+        ({
+          root: "/opt/openclaw",
+          installKind: "package",
+          packageManager: "npm",
+        }) satisfies UpdateCheckResult,
+    ),
   };
 });
 
@@ -102,7 +105,7 @@ describe("extended-stable startup update integration", () => {
       channel: "extended-stable",
     });
     expect(log.info).toHaveBeenCalledWith(
-      "update available (extended-stable): v2.0.0 (current v1.0.0). Run: openclaw update",
+      "update available (extended-stable): v2.0.0 (current v1.0.0). Run: zolven-intelligence update",
     );
     expect(runAutoUpdate).not.toHaveBeenCalled();
   });

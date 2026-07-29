@@ -2280,7 +2280,7 @@ describe("runCli exit behavior", () => {
 
   it("suggests close known commands for unowned command roots before proxy startup", async () => {
     await expect(runCli(["node", "openclaw", "upate"])).rejects.toThrow(
-      "Did you mean this?\n  openclaw update",
+      "Did you mean this?\n  zolven-intelligence update",
     );
 
     expect(startProxyMock).not.toHaveBeenCalled();

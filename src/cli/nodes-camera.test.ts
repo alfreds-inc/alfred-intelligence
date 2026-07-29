@@ -139,7 +139,7 @@ describe("nodes camera helpers", () => {
       tmpDir: "/tmp",
       id: "id1",
     });
-    expect(p).toBe(path.join("/tmp", "openclaw-camera-snap-front-id1.jpg"));
+    expect(p).toBe(path.join("/tmp", "zolven-intelligence-camera-snap-front-id1.jpg"));
   });
 
   it("rejects media format path traversal", () => {
@@ -180,7 +180,7 @@ describe("nodes camera helpers", () => {
         tmpDir: dir,
         id: "clip1",
       });
-      expect(out).toBe(path.join(dir, "openclaw-camera-clip-front-clip1.mp4"));
+      expect(out).toBe(path.join(dir, "zolven-intelligence-camera-clip-front-clip1.mp4"));
       await expect(readFileUtf8AndCleanup(out)).resolves.toBe("hi");
     });
   });
@@ -201,7 +201,7 @@ describe("nodes camera helpers", () => {
         id: "clip2",
         expectedHost,
       });
-      expect(out).toBe(path.join(dir, "openclaw-camera-clip-back-clip2.mp4"));
+      expect(out).toBe(path.join(dir, "zolven-intelligence-camera-clip-back-clip2.mp4"));
       await expect(readFileUtf8AndCleanup(out)).resolves.toBe("url-clip");
     });
   });

@@ -1112,7 +1112,7 @@ describe("update-cli", () => {
 
     await updateCommand({ yes: true, restart: false });
 
-    expect(installCompletion).toHaveBeenCalledWith("zsh", true, "openclaw");
+    expect(installCompletion).toHaveBeenCalledWith("zsh", true, "zolven-intelligence");
     const logOutput = vi
       .mocked(runtimeCapture.log)
       .mock.calls.map((call) => String(call[0]))
@@ -2928,7 +2928,7 @@ describe("update-cli", () => {
       [
         "Package updates cannot run from inside the gateway service process.",
         "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-        "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+        "Run `zolven-intelligence update` from a shell outside the gateway service, or stop the gateway service first and then update.",
       ].join("\n"),
     );
     expectPackageInstallSpec("openclaw@latest");
@@ -2959,7 +2959,7 @@ describe("update-cli", () => {
       [
         "Package updates cannot run from inside the gateway service process.",
         "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-        "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+        "Run `zolven-intelligence update` from a shell outside the gateway service, or stop the gateway service first and then update.",
       ].join("\n"),
     );
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -3005,7 +3005,7 @@ describe("update-cli", () => {
         [
           "Package updates cannot run from inside the gateway service process.",
           "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-          "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+          "Run `zolven-intelligence update` from a shell outside the gateway service, or stop the gateway service first and then update.",
         ].join("\n"),
       );
       expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -3038,7 +3038,7 @@ describe("update-cli", () => {
       [
         "Package updates cannot run from inside the gateway service process.",
         "That path replaces the active OpenClaw dist tree while the live gateway may still lazy-load old chunks.",
-        "Run `openclaw update` from a shell outside the gateway service, or stop the gateway service first and then update.",
+        "Run `zolven-intelligence update` from a shell outside the gateway service, or stop the gateway service first and then update.",
       ].join("\n"),
     );
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
@@ -3516,7 +3516,7 @@ describe("update-cli", () => {
     expect(updateNpmInstalledPlugins).not.toHaveBeenCalled();
     expect(defaultRuntime.exit).not.toHaveBeenCalledWith(1);
     const jsonOutput = lastWriteJsonCall() as UpdateRunResult | undefined;
-    const doctorStep = jsonOutput?.steps.find((step) => step.name === "openclaw doctor");
+    const doctorStep = jsonOutput?.steps.find((step) => step.name === "zolven-intelligence doctor");
     expect(jsonOutput?.status).toBe("ok");
     expect(doctorStep?.exitCode).toBe(UPDATE_POST_INSTALL_DOCTOR_ADVISORY_EXIT_CODE);
     expect(doctorStep?.advisory).toEqual({
@@ -3588,7 +3588,7 @@ describe("update-cli", () => {
     expect(spawn).not.toHaveBeenCalled();
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
     const jsonOutput = lastWriteJsonCall() as UpdateRunResult | undefined;
-    const doctorStep = jsonOutput?.steps.find((step) => step.name === "openclaw doctor");
+    const doctorStep = jsonOutput?.steps.find((step) => step.name === "zolven-intelligence doctor");
     expect(doctorStep?.exitCode).toBe(124);
     expect(doctorStep?.advisory).toBeUndefined();
     expect(doctorStep?.termination).toBe("timeout");
@@ -4838,7 +4838,9 @@ describe("update-cli", () => {
     expect(logs).toContain(
       `Shell OpenClaw root differs from the managed gateway service root: ${shellRoot}`,
     );
-    expect(logs).toContain("make sure `openclaw` on PATH resolves to the managed service root");
+    expect(logs).toContain(
+      "make sure `zolven-intelligence` on PATH resolves to the managed service root",
+    );
     expect(logs).toContain(`Managed gateway service Node: ${serviceNode}`);
   });
 

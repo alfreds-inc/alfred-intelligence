@@ -576,9 +576,9 @@ describe("formatPostUpdateGatewayRecoveryInstructions", () => {
     const [line] = formatPostUpdateGatewayRecoveryInstructions(result, "linux");
 
     expect(line).toContain("the systemd user service");
-    expect(line).toContain("openclaw gateway restart");
-    expect(line).toContain("openclaw gateway install --force");
-    expect(line).toContain("openclaw gateway status --deep");
+    expect(line).toContain("zolven-intelligence gateway restart");
+    expect(line).toContain("zolven-intelligence gateway install --force");
+    expect(line).toContain("zolven-intelligence gateway status --deep");
     expect(line).not.toContain("Linux reports");
     expect(line).not.toContain("macOS");
     expect(line).not.toContain("LaunchAgent");
