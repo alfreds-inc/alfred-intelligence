@@ -1,12 +1,12 @@
 {
   "name": "@zolven/intelligence",
-  "version": "2026.7.1",
+  "version": "2026.7.1-zolven.2",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "@zolven/intelligence",
-      "version": "2026.7.1",
+      "version": "2026.7.1-zolven.2",
       "hasInstallScript": true,
       "license": "MIT",
       "dependencies": {
