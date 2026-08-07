@@ -7,19 +7,23 @@ the runtime as **Zolven Intelligence** throughout Zolven's product flow.
 
 ## Branch model
 
-- **`zolven-brand`** is the GitHub default fork branch contract. It is
+- **`main`** is the GitHub default branch and the fork's patch series. It is
   bot-managed and force-pushed by
   `.github/workflows/zolven-rebase-and-publish.yml` after rebasing onto the
-  latest upstream stable calver tag. The workflow job remains inert until
-  GitHub reports `zolven-brand` as the selected ref: merge the rebrand first,
-  then use GitHub's branch-rename operation on the current default branch.
-  Do not create or delete the cutover branches manually.
+  latest upstream stable calver tag.
+  The force-push is structural, not incidental: the workflow resolves the next
+  rebase base by reading `package.json` on this branch and checking
+  `git merge-base --is-ancestor <base-tag> HEAD`. If the branch did not
+  advance, the following run would replay from a stale base and re-apply
+  commits it already applied. Do not redirect the push to a side branch.
 - **`upstream-main`** is a one-to-one mirror of `openclaw/openclaw:main`. The
   same workflow updates it for tracking only.
-- **`main`** is the historical fork-time mirror.
 - Release tags (`vYYYY.M.D-zolven.N`) and promoted GitHub Releases are
   immutable records. Do not rely on the force-pushed fork branch tip remaining
   rewind-stable.
+- `archive/*` tags preserve retired fork lineages (the pre-rename `main`, the
+  Alfred-era branch, and fork-owned feature branches) so the branch list can
+  stay pruned without losing history.
 
 If the bot force-pushes while a local edit is in progress, recover with
 `git pull --rebase`. Hotfixes land as fork commits that the next rebase replays.

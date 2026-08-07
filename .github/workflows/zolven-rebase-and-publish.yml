@@ -46,9 +46,7 @@ permissions:
   issues: write
 
 env:
-  # Controlled cutover: merge the rebrand first, then rename the GitHub default
-  # branch to this value before enabling scheduled or manual execution.
-  FORK_BRANCH: zolven-brand
+  FORK_BRANCH: main
 
 concurrency:
   group: zolven-rebase-publish
@@ -56,9 +54,9 @@ concurrency:
 
 jobs:
   rebase-and-publish:
-    # GitHub schedules execute from the default branch. Keep the mutating job
-    # inert between merge and the GitHub-managed default-branch rename.
-    if: github.ref_name == 'zolven-brand'
+    # GitHub schedules execute from the default branch. Guard against the
+    # workflow being dispatched from a topic branch and force-pushing main.
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     # The prepack build (tsdown core + all bundled extensions) runs on a
     # 2-core hosted runner; observed 2.5h+ on 2026-07-29 (run 30463038341 hit
@@ -146,7 +144,7 @@ jobs:
             if ! (
               set -e
               mapfile -t fork_commits < <(git rev-list --reverse "${current}..HEAD")
-              git checkout -B zolven-brand-rebased "$target"
+              git checkout -B fork-rebased "$target"
               for commit in "${fork_commits[@]}"; do
                 subject="$(git log -1 --format=%s "$commit")"
                 if [[ "$subject" =~ ^release:\ [0-9]+\.[0-9]+\.[0-9]+-zolven\.[0-9]+$ ]]; then
