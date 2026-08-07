@@ -149,14 +149,6 @@ describe("resolveOpenClawPackageRoot", () => {
       },
     },
     {
-      name: "resolves the Zolven Intelligence package root",
-      setup: () => {
-        const pkgRoot = fx("zolven-package");
-        setPackageRoot(pkgRoot, "@zolven/intelligence");
-        return { opts: { cwd: pkgRoot }, expected: pkgRoot };
-      },
-    },
-    {
       name: "prefers a symlink target nested under another openclaw package",
       setup: () => {
         const sourceRoot = fx("nested-symlink-scenario");

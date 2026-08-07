@@ -30,6 +30,7 @@ import {
 } from "../../agents/model-visibility-policy.js";
 import { listOpenAIAuthProfileProvidersForAgentRuntime } from "../../agents/openai-routing.js";
 import { resolveDefaultAgentWorkspaceDir } from "../../agents/workspace.js";
+import { PRODUCT_NAME } from "../../branding.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
@@ -109,7 +110,7 @@ function buildRuntimeChoice(params: {
     label,
     description:
       id === "openclaw"
-        ? "Use the built-in OpenClaw runtime."
+        ? `Use the built-in ${PRODUCT_NAME} runtime.`
         : params.cli
           ? `Run ${params.provider} models through ${label}.`
           : `Use the ${label} runtime selected by the effective harness policy.`,

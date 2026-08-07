@@ -11,6 +11,7 @@ import {
 } from "@openclaw/normalization-core/string-coerce";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
 import { formatFastModeCurrentStatus, resolveFastModeState } from "../../agents/fast-mode.js";
+import { PRODUCT_NAME } from "../../branding.js";
 import {
   setChannelConversationBindingIdleTimeoutBySessionKey,
   setChannelConversationBindingMaxAgeBySessionKey,
@@ -781,7 +782,7 @@ export const handleRestartCommand: CommandHandler = async (params, allowTextComm
     return {
       shouldContinue: false,
       reply: {
-        text: "⚙️ Restarting OpenClaw in-process (SIGUSR1); back in a few seconds.",
+        text: `⚙️ Restarting ${PRODUCT_NAME} in-process (SIGUSR1); back in a few seconds.`,
       },
     };
   }
@@ -816,7 +817,7 @@ export const handleRestartCommand: CommandHandler = async (params, allowTextComm
   return {
     shouldContinue: false,
     reply: {
-      text: `⚙️ Restarting OpenClaw via ${restartMethod.method}; give me a few seconds to come back online.`,
+      text: `⚙️ Restarting ${PRODUCT_NAME} via ${restartMethod.method}; give me a few seconds to come back online.`,
     },
   };
 };

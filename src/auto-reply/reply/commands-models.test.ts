@@ -621,7 +621,7 @@ describe("handleModelsCommand", () => {
     expect(data.runtimeChoicesByProvider?.get("openai")?.[1]).toEqual({
       id: "openclaw",
       label: "OpenClaw Default",
-      description: "Use the built-in OpenClaw runtime.",
+      description: "Use the built-in Zolven Intelligence runtime.",
     });
   });
 
@@ -645,7 +645,7 @@ describe("handleModelsCommand", () => {
     expect(data.runtimeChoicesByProvider?.get("openai")?.[0]).toEqual({
       id: "openclaw",
       label: "OpenClaw Default",
-      description: "Use the built-in OpenClaw runtime.",
+      description: "Use the built-in Zolven Intelligence runtime.",
     });
   });
 
@@ -678,7 +678,7 @@ describe("handleModelsCommand", () => {
     expect(data.runtimeChoicesByProvider?.get("openai")?.[1]).toEqual({
       id: "openclaw",
       label: "OpenClaw Default",
-      description: "Use the built-in OpenClaw runtime.",
+      description: "Use the built-in Zolven Intelligence runtime.",
     });
   });
 
@@ -703,7 +703,7 @@ describe("handleModelsCommand", () => {
     expect(data.runtimeChoicesByProvider?.get("anthropic")?.[0]).toEqual({
       id: "openclaw",
       label: "OpenClaw Default",
-      description: "Use the built-in OpenClaw runtime.",
+      description: "Use the built-in Zolven Intelligence runtime.",
     });
   });
 
@@ -733,7 +733,7 @@ describe("handleModelsCommand", () => {
     expect(data.runtimeChoicesByProvider?.get("anthropic")?.[1]).toEqual({
       id: "openclaw",
       label: "OpenClaw Default",
-      description: "Use the built-in OpenClaw runtime.",
+      description: "Use the built-in Zolven Intelligence runtime.",
     });
   });
 

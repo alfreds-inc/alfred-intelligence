@@ -29,7 +29,12 @@ If the bot force-pushes while a local edit is in progress, recover with
 Keep the product delta consolidated and easy to replay. The current surface,
 verified against upstream `v2026.7.1`, is:
 
-1. `package.json` identifies the distribution as `@zolven/intelligence`.
+1. `package.json` keeps the upstream `openclaw` package identity. Renaming it
+   broke packaging (`npm pack` emitted a name the packer's tarball matcher
+   rejected), workspace resolution (32 extensions declare
+   `"openclaw": "workspace:*"`), and update package-root detection
+   (`DEFAULT_PACKAGE_NAME` is `openclaw`). Branding is a user-visible concern
+   only — do not rename the package to brand the product.
    `zolven-intelligence` is the product binary; `openclaw` remains available as
    the upstream compatibility entrypoint. Repository metadata points to
    `Zolven/zolven-intelligence`.
@@ -79,7 +84,15 @@ from the public npm registry:
 https://github.com/Zolven/zolven-intelligence/releases/latest/download/zolven-intelligence.tgz
 ```
 
-The tarball's internal package identity is `@zolven/intelligence`, so removal is:
+The tarball's internal package identity is `openclaw`, so removal is:
+
+```sh
+npm uninstall -g openclaw
+```
+
+Installs made from releases up to and including `v2026.7.1-zolven.2` carry the
+older `@zolven/intelligence` identity. Those upgrade to a same-name install
+rather than in place, so remove the old identity once:
 
 ```sh
 npm uninstall -g @zolven/intelligence

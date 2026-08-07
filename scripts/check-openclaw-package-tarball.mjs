@@ -73,7 +73,7 @@ const PACKAGE_DEPENDENCY_SECTIONS = [
   "peerDependencies",
   "devDependencies",
 ];
-const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@zolven/intelligence"]);
+const ALLOWED_PACKAGE_NAMES = new Set(["openclaw"]);
 const REQUIRED_BUNDLED_WORKSPACE_DEPENDENCIES = ["@openclaw/ai"];
 // Strict Docker artifacts bundle this private runtime rather than resolving it
 // from npm. Keep the concrete load-bearing entries explicit instead of

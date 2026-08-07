@@ -70,6 +70,7 @@ import {
 import { buildAgentRuntimeOutcomePlan } from "../../agents/runtime-plan/build.js";
 import { resolveSessionRuntimeOverrideForProvider } from "../../agents/session-runtime-compat.js";
 import { resolveCandidateThinkingLevel } from "../../agents/thinking-runtime.js";
+import { PRODUCT_NAME } from "../../branding.js";
 import { resolveGroupSessionKey, type SessionEntry } from "../../config/sessions.js";
 import { updateSessionEntry } from "../../config/sessions/session-accessor.js";
 import { resolveSilentReplyPolicy } from "../../config/silent-reply.js";
@@ -858,10 +859,10 @@ const CODEX_APP_SERVER_TURN_COMPLETION_IDLE_TIMEOUT_RE =
 function buildCodexAppServerFailureText(message: string): string | null {
   const normalizedMessage = collapseRepeatedFailureDetail(message);
   if (CODEX_APP_SERVER_CLIENT_CLOSED_BEFORE_REPLY_RE.test(normalizedMessage)) {
-    return "⚠️ Codex app-server connection closed before this turn finished. OpenClaw retried once when the stdio turn was still replay-safe; please try again if this keeps happening.";
+    return `⚠️ Codex app-server connection closed before this turn finished. ${PRODUCT_NAME} retried once when the stdio turn was still replay-safe; please try again if this keeps happening.`;
   }
   if (CODEX_APP_SERVER_TURN_COMPLETION_IDLE_TIMEOUT_RE.test(normalizedMessage)) {
-    return "⚠️ Codex app-server stopped before confirming turn completion. OpenClaw did not replay the turn automatically because it may still be active; try again, or use /new if the session stays stuck.";
+    return `⚠️ Codex app-server stopped before confirming turn completion. ${PRODUCT_NAME} did not replay the turn automatically because it may still be active; try again, or use /new if the session stays stuck.`;
   }
   return null;
 }

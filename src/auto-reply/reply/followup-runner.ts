@@ -39,6 +39,7 @@ import {
 } from "../../agents/runtime-plan/build.js";
 import { resolveSessionRuntimeOverrideForProvider } from "../../agents/session-runtime-compat.js";
 import { resolveCandidateThinkingLevel } from "../../agents/thinking-runtime.js";
+import { PRODUCT_NAME } from "../../branding.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import { loadSessionEntry, updateSessionEntry } from "../../config/sessions/session-accessor.js";
 import type { TypingMode } from "../../config/types.js";
@@ -549,7 +550,7 @@ export function createFollowupRunner(params: {
       deliveredAnyPayload =
         (await sendDispatcherPayload({
           text:
-            "Follow-up completed, but OpenClaw could not deliver it to the originating " +
+            `Follow-up completed, but ${PRODUCT_NAME} could not deliver it to the originating ` +
             "channel. The reply content was not forwarded to this channel to avoid " +
             "cross-channel misdelivery.",
           isError: true,

@@ -817,10 +817,12 @@ describe("collectReleasePackageMetadataErrors", () => {
     ).toStrictEqual([]);
   });
 
-  it("accepts the Zolven Intelligence fork identity as valid", () => {
+  it("accepts the Zolven fork distribution metadata as valid", () => {
+    // The fork keeps the upstream `openclaw` package name and brands only the
+    // product bin and repository, so this guards that exact combination.
     expect(
       collectReleasePackageMetadataErrors({
-        name: "@zolven/intelligence",
+        name: "openclaw",
         description: "Zolven Intelligence, a branded OpenClaw runtime for Zolven",
         license: "MIT",
         repository: { url: "git+https://github.com/Zolven/zolven-intelligence.git" },

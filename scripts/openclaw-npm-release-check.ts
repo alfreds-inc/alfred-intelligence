@@ -62,13 +62,15 @@ type NpmDistTagMirrorAuth = {
   hasAuth: boolean;
   source: "node-auth-token" | "npm-token" | "none";
 };
-// Accept upstream identity plus the Zolven Intelligence distribution so this
-// shared release guard validates both package contracts.
+// The fork keeps the upstream `openclaw` package identity so packaging, update,
+// and workspace resolution stay on one canonical name; Zolven branding lives in
+// user-visible surfaces only. Both repository URLs stay valid because the fork
+// publishes its own GitHub Releases from the same package contract.
 const ALLOWED_REPOSITORY_URLS = new Set([
   "https://github.com/openclaw/openclaw",
   "https://github.com/Zolven/zolven-intelligence",
 ]);
-const ALLOWED_PACKAGE_NAMES = new Set(["openclaw", "@zolven/intelligence"]);
+const ALLOWED_PACKAGE_NAMES = new Set(["openclaw"]);
 const ALLOWED_BIN_ENTRIES = new Set(["openclaw", "zolven-intelligence"]);
 const OPTIONAL_LOCAL_EMBEDDING_RUNTIME_PACKAGE = "node-llama-cpp";
 const FS_SAFE_PACKAGE = "@openclaw/fs-safe";

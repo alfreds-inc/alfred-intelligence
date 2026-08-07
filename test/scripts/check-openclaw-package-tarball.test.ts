@@ -269,21 +269,6 @@ describe("check-openclaw-package-tarball", () => {
     );
   });
 
-  it("accepts matching branded package and shrinkwrap names", () => {
-    withTarball(
-      [FLAT_PLUGIN_SDK_DECLARATION],
-      { [FLAT_PLUGIN_SDK_DECLARATION]: "export {};\n" },
-      (tarball) => {
-        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
-
-        expect(result.status, result.stderr).toBe(0);
-        expect(result.stdout).toContain("OpenClaw package tarball integrity passed.");
-      },
-      "2026.7.1",
-      { packageJson: { name: "@zolven/intelligence" } },
-    );
-  });
-
   it("rejects an unexpected package identity even when the shrinkwrap matches", () => {
     withTarball(
       [FLAT_PLUGIN_SDK_DECLARATION],
@@ -292,9 +277,7 @@ describe("check-openclaw-package-tarball", () => {
         const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
 
         expect(result.status).not.toBe(0);
-        expect(result.stderr).toContain(
-          "package.json name must be one of [openclaw, @zolven/intelligence]",
-        );
+        expect(result.stderr).toContain("package.json name must be one of [openclaw]");
       },
       "2026.7.1",
       { packageJson: { name: "@zolven/intelligense" } },

@@ -1,11 +1,11 @@
 {
-  "name": "@zolven/intelligence",
+  "name": "openclaw",
   "version": "2026.7.1",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
-      "name": "@zolven/intelligence",
+      "name": "openclaw",
       "version": "2026.7.1",
       "hasInstallScript": true,
       "license": "MIT",

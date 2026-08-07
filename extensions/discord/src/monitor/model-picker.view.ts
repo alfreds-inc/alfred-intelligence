@@ -217,7 +217,7 @@ function getRuntimeChoices(params: {
     {
       id: "openclaw",
       label: "OpenClaw Default",
-      description: "Use the built-in OpenClaw runtime.",
+      description: "Use the built-in Zolven Intelligence runtime.",
     },
   ];
 }

@@ -397,7 +397,7 @@ jobs:
           prefix="$(mktemp -d)"
           npm install -g --prefix "$prefix" ./zolven-intelligence.tgz
 
-          manifest="$prefix/lib/node_modules/@zolven/intelligence/package.json"
+          manifest="$prefix/lib/node_modules/openclaw/package.json"
           installed_version="$(node -e "process.stdout.write(JSON.parse(require('node:fs').readFileSync('$manifest','utf8')).version)")"
           expected="${{ steps.next.outputs.version }}"
           if [ "$installed_version" != "$expected" ]; then
@@ -412,7 +412,7 @@ jobs:
             fi
           done
           timeout 120 "$prefix/bin/zolven-intelligence" --version
-          echo "Smoke install OK: @zolven/intelligence@${installed_version} (bins: zolven-intelligence, openclaw)"
+          echo "Smoke install OK: openclaw@${installed_version} (bins: zolven-intelligence, openclaw)"
 
       - name: Resolve release gate
         id: gate
