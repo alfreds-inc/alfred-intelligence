@@ -143,27 +143,34 @@ names verbatim, so they need the same repointing.
 ## Scheduled workflows
 
 The fork inherits upstream workflows that may depend on upstream-only secrets,
-products, or runner capacity. Disable unsuitable scheduled workflows through
-the Actions API rather than carrying YAML deletions when possible; this keeps
-the replayed fork surface small.
+products, or runner capacity.
 
-Keep:
+Gate them in YAML with `if: github.repository == 'openclaw/openclaw'` on the
+job, which is upstream's own convention and therefore replays cleanly. Earlier
+guidance here preferred disabling through the Actions API to keep the replayed
+surface small; that state is invisible in review, is not versioned, and resets
+when the workflow file changes. A one-line job gate costs almost nothing at
+rebase time and is visible in the diff.
+
+For a multi-job workflow, gate only the root job the others reach through
+`needs:` — dependants skip with it.
+
+Runs on the fork:
 
 - `zolven-rebase-and-publish.yml`
 - `codeql.yml`
 - `codeql-critical-quality.yml`
 - `install-smoke.yml` with its upstream-only lane gated by repository
 
-Known upstream-only or non-actionable scheduled lanes may remain disabled in
-repository settings:
+Gated to upstream:
 
-- `openclaw-scheduled-live-checks.yml`
-- `qa-live-transports-convex.yml`
-- `openclaw-performance.yml`
-- `stale.yml`
-- `control-ui-locale-refresh.yml`
-- `codeql-android-critical-security.yml`
-- `codeql-macos-critical-security.yml`
+- `openclaw-scheduled-live-checks.yml` — live provider secrets
+- `qa-live-transports-convex.yml` — live provider secrets (root job only)
+- `openclaw-performance.yml` — upstream perf baselines and runner capacity
+- `stale.yml` — closes/locks issues against upstream's maintainer roster
+- `control-ui-locale-refresh.yml` — already gated upstream
+- `codeql-android-critical-security.yml` — Blacksmith runners
+- `codeql-macos-critical-security.yml` — Blacksmith macOS runners
 
 Keep failure signals few and actionable. A permanently red workflow hides real
 release and rebase failures.
