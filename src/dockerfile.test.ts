@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const dockerfilePath = join(repoRoot, "Dockerfile");
-const dockerReleaseWorkflowPath = join(repoRoot, ".github/workflows/docker-release.yml");
 const fullReleaseValidationWorkflowPath = join(
   repoRoot,
   ".github/workflows/full-release-validation.yml",
@@ -319,76 +318,11 @@ describe("Dockerfile", () => {
     );
   });
 
-  it("keeps the Codex plugin in official Docker release images", async () => {
-    const workflow = await readFile(dockerReleaseWorkflowPath, "utf8");
-    const releaseKeepList = "OPENCLAW_EXTENSIONS=diagnostics-otel,codex";
-
-    expect(workflow.match(new RegExp(releaseKeepList, "g"))).toHaveLength(4);
-    expect(workflow).not.toContain("OPENCLAW_EXTENSIONS=diagnostics-otel\n");
-  });
-
-  it("publishes official Docker browser images with baked Chromium", async () => {
-    const workflow = await readFile(dockerReleaseWorkflowPath, "utf8");
-
-    expect(workflow).toContain("Build and push amd64 browser image");
-    expect(workflow).toContain("Build and push arm64 browser image");
-    expect(workflow).toContain("OPENCLAW_INSTALL_BROWSER=1");
-    expect(workflow).toContain('${GHCR_IMAGE}:${version}-browser"');
-    expect(workflow).toContain('${DOCKERHUB_IMAGE}:${version}-browser"');
-    expect(workflow).toContain('${GHCR_IMAGE}:latest-browser"');
-    expect(workflow).toContain('${DOCKERHUB_IMAGE}:latest-browser"');
-    expect(workflow).toContain('${GHCR_IMAGE}:main-browser"');
-    expect(workflow).toContain('${DOCKERHUB_IMAGE}:main-browser"');
-    expect(workflow).not.toContain("main-browser-amd64");
-    expect(workflow).not.toContain("main-browser-arm64");
-    expect(workflow).toContain("Smoke test amd64 browser image");
-    expect(workflow).toContain("Smoke test arm64 browser image");
-    expect(workflow).toContain("chrome-headless-shell");
-    expect(workflow).toContain("grep -q '^ARG OPENCLAW_INSTALL_BROWSER' Dockerfile");
-    expect(workflow).toContain("if: steps.tags.outputs.browser != ''");
-    expect(workflow).toContain('git show "${SOURCE_REF}:Dockerfile"');
-    expect(workflow).toContain('if [[ -n "${BROWSER_TAGS}" ]]; then');
-  });
-
-  it("publishes official Docker releases to GHCR and Docker Hub", async () => {
-    const workflow = await readFile(dockerReleaseWorkflowPath, "utf8");
-
-    expect(workflow).toContain("REGISTRY: ghcr.io");
-    expect(workflow).toContain("DOCKERHUB_REGISTRY: docker.io");
-    expect(workflow).toContain("DOCKERHUB_IMAGE_NAME: openclaw/openclaw");
-    expect(workflow).toContain("Validate Docker Hub publish credentials");
-    expect(workflow).toContain("DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets");
-    expect(workflow).toContain("Login to GitHub Container Registry");
-    expect(workflow).toContain("Login to Docker Hub");
-    expect(workflow).toContain('images=("${GHCR_IMAGE}" "${DOCKERHUB_IMAGE}")');
-    expect(workflow).toContain("DOCKERHUB_TAGS: ${{ steps.tags.outputs.dockerhub }}");
-    expect(workflow).toContain("${DOCKERHUB_IMAGE}:${version}-amd64");
-    expect(workflow).toContain("${DOCKERHUB_IMAGE}:${version}-arm64");
-    expect(workflow).toContain("DOCKERHUB_MULTI_REFS: ${{ steps.refs.outputs.dockerhub_multi }}");
-  });
-
-  it("publishes beta Docker tags without advancing latest aliases", async () => {
-    const workflow = await readFile(dockerReleaseWorkflowPath, "utf8");
-
-    expect(workflow).toContain("Existing stable or beta release tag to backfill");
-    expect(workflow).toContain('! "${RELEASE_TAG}" =~ ^v[0-9]{4}');
-    expect(workflow).toContain("(-beta\\.[1-9][0-9]*)?");
-    expect(workflow).toContain("${DOCKERHUB_IMAGE}:${version}");
-    expect(workflow).toContain("${DOCKERHUB_IMAGE}:${version}-slim");
-    expect(workflow).toContain("${DOCKERHUB_IMAGE}:${version}-browser");
-    expect(workflow.split("do not advance latest/main aliases from those flows")).toHaveLength(3);
-    expect(workflow.split('"$version" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9]+)?$')).toHaveLength(3);
-  });
-
-  it("smokes runtime workspace templates before Docker release manifests publish", async () => {
-    const workflow = await readFile(dockerReleaseWorkflowPath, "utf8");
-
-    expect(workflow).toContain("Smoke test amd64 runtime workspace templates");
-    expect(workflow).toContain("Smoke test arm64 runtime workspace templates");
-    expect(workflow).toContain("test -f /app/src/agents/templates/HEARTBEAT.md");
-    expect(workflow).toContain('grep -F "Missing workspace template:"');
-    expect(workflow).toContain('test -f "${temp_root}/home/.openclaw/workspace/HEARTBEAT.md"');
-  });
+  // Upstream's Docker publishing tests (GHCR/Docker Hub image contracts, browser
+  // image tags, release manifest smokes) are not carried here: this fork ships a
+  // GitHub Release tarball and does not publish images, so `docker-release.yml`
+  // is absent. The Dockerfile itself is still built and still covered above.
+  // See FORK-NOTES.md "Docker distribution" for how to restore the lane.
 
   it("keeps only the runtime-assets prune proof in full release validation", async () => {
     const workflow = await readFile(fullReleaseValidationWorkflowPath, "utf8");

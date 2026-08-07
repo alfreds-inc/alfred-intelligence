@@ -117,6 +117,29 @@ Versions follow `<upstream-stable>-zolven.<run-number>`.
 Enable immutable releases in repository settings. A fixed installer URL is
 safe only when an existing tag and asset cannot be replaced.
 
+### Docker distribution (not carried)
+
+The fork distributes the GitHub Release tarball only. `docker-release.yml` and
+`docker-channel-promote.yml` were dropped during the `v2026.7.1` rebase, so no
+image is published to GHCR or Docker Hub.
+
+`Dockerfile` itself is still carried and still covered by `src/dockerfile.test.ts`
+— only upstream's _publishing_ assertions were removed, because they encode
+upstream's registry contract (`openclaw/openclaw` image names, Docker Hub
+credentials) rather than anything this fork owns.
+
+This is reversible. To restore the lane:
+
+```sh
+git checkout upstream/main -- .github/workflows/docker-release.yml
+git checkout upstream/main -- .github/workflows/docker-channel-promote.yml
+git checkout upstream/main -- src/dockerfile.test.ts
+```
+
+Then set `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` and repoint the image names
+away from `openclaw/openclaw`. Note the restored tests assert upstream's image
+names verbatim, so they need the same repointing.
+
 ## Scheduled workflows
 
 The fork inherits upstream workflows that may depend on upstream-only secrets,

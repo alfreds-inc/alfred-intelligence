@@ -55,6 +55,11 @@ describe("slash command browser import", () => {
     expect(importDeclarations(sharedRegistry)).toEqual([
       'import { normalizeOptionalLowercaseString } from "../../packages/normalization-core/src/string-coerce.js";',
       'import { normalizeStringEntries } from "../../packages/normalization-core/src/string-normalization.js";',
+      // Fork-local: the shared registry renders the product name into command
+      // help text. src/branding.ts is a leaf constants module -- no imports, one
+      // exported string -- so it cannot pull provider thinking runtime into the
+      // Control UI bundle, which is the boundary this assertion protects.
+      'import { PRODUCT_NAME } from "../branding.js";',
       'import { formatFastModeAutoLabel, resolveFastModeModelAutoOnSeconds } from "../shared/fast-mode.js";',
       'import { COMMAND_ARG_FORMATTERS } from "./commands-args.js";',
       'import type { ChatCommandDefinition, CommandArgChoiceContext, CommandCategory, CommandScope, CommandTier } from "./commands-registry.types.js";',
