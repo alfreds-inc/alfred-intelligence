@@ -58,6 +58,10 @@ env:
 
 jobs:
   authorize_actor:
+    # Fork gate: live QA lanes need upstream-only provider secrets. Every other
+    # job in this file needs authorize_actor (directly or via
+    # validate_selected_ref), so gating this root skips the whole workflow.
+    if: github.repository == 'openclaw/openclaw'
     name: Authorize workflow actor
     runs-on: blacksmith-8vcpu-ubuntu-2404
     outputs:

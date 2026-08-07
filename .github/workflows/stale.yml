@@ -38,7 +38,10 @@ permissions: {}
 
 jobs:
   stale:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.backfill_stale_closures != true }}
+    # Fork gate: this lane closes and locks issues/PRs against upstream's
+    # maintainer roster. Running it on a downstream fork would auto-close the
+    # fork's own tracker using policy the fork does not own.
+    if: ${{ github.repository == 'openclaw/openclaw' && (github.event_name != 'workflow_dispatch' || inputs.backfill_stale_closures != true) }}
     permissions:
       issues: write
       pull-requests: write
@@ -241,7 +244,7 @@ jobs:
             That channel is the escape hatch for high-quality PRs that get auto-closed.
 
   backfill-stale-closures:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill_stale_closures == true }}
+    if: ${{ github.repository == 'openclaw/openclaw' && github.event_name == 'workflow_dispatch' && inputs.backfill_stale_closures == true }}
     permissions:
       issues: write
       pull-requests: write
@@ -489,7 +492,7 @@ jobs:
             }
 
   lock-closed-issues:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.backfill_stale_closures != true }}
+    if: ${{ github.repository == 'openclaw/openclaw' && (github.event_name != 'workflow_dispatch' || inputs.backfill_stale_closures != true) }}
     permissions:
       issues: write
     runs-on: blacksmith-16vcpu-ubuntu-2404

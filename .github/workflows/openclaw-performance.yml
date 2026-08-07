@@ -70,6 +70,9 @@ env:
 
 jobs:
   kova:
+    # Fork gate: upstream-only perf baselines and runner capacity. Fork results
+    # are not actionable and would run 4h nightly against no baseline.
+    if: github.repository == 'openclaw/openclaw'
     name: ${{ matrix.title }}
     runs-on: blacksmith-16vcpu-ubuntu-2404
     timeout-minutes: 240

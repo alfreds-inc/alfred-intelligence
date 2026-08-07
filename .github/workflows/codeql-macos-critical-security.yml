@@ -19,6 +19,9 @@ permissions:
 
 jobs:
   macos:
+    # Fork gate: needs upstream-only Blacksmith macOS runners; on the fork it
+    # fails weekly and buries real release/rebase failures in red.
+    if: github.repository == 'openclaw/openclaw'
     name: Critical Security (macOS)
     runs-on: blacksmith-6vcpu-macos-15
     timeout-minutes: 45

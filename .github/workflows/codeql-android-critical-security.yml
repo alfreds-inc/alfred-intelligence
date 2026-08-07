@@ -19,6 +19,9 @@ permissions:
 
 jobs:
   android:
+    # Fork gate: needs upstream-only Blacksmith runners; on the fork it fails
+    # nightly and buries real release/rebase failures in red.
+    if: github.repository == 'openclaw/openclaw'
     name: Critical Security (android)
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 45

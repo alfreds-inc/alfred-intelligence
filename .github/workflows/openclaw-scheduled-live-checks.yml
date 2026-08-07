@@ -20,6 +20,9 @@ env:
 
 jobs:
   live_and_openwebui_checks:
+    # Fork gate: live provider/transport checks need upstream-only secrets.
+    # Without them this fails nightly and hides real fork failures.
+    if: github.repository == 'openclaw/openclaw'
     permissions:
       actions: read
       contents: read
