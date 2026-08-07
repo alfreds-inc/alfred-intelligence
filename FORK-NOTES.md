@@ -175,6 +175,26 @@ Gated to upstream:
 Keep failure signals few and actionable. A permanently red workflow hides real
 release and rebase failures.
 
+### Known-red: `security-fast`
+
+`security-fast` fails on this fork and is expected to. It is the one red lane
+that is not noise, so do not gate, allowlist, or silence it.
+
+The fork rebases onto the latest upstream _stable_ calver tag. Upstream patched
+`axios`, `undici`, `postcss`, `fast-uri`, `ip-address`, and `brace-expansion` on
+`main` after cutting `v2026.7.1`, and `v2026.7.1` is still the newest stable tag,
+so the fork carries the vulnerable versions with no newer base to rebase onto.
+
+Exit condition: upstream cuts a stable tag containing those bumps. The Monday
+rebase picks it up and this lane goes green on its own — no action here.
+
+Accepted deliberately in August 2026 because the tarball had no real users yet.
+Revisit before onboarding any: the shipped artifact carries these versions. The
+fix at that point is targeted `pnpm.overrides` pinned to the versions upstream
+already runs on `main`, removed once a stable tag includes them.
+
+When judging a red CI run, subtract this lane first. Anything else red is new.
+
 ## Resolving a rebase conflict
 
 The workflow opens a repository issue when its rebase fails. Resolve locally:
